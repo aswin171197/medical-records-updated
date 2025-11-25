@@ -1,0 +1,8 @@
+{
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ],
+    "appService.defaultWebAppToDeploy": "/subscriptions/18315164-b554-4258-a236-405cdf4f38cc/resourceGroups/medical-record-app_group/providers/Microsoft.Web/sites/medical-record-app",
+    "appService.deploySubpath": "backend"
+}
