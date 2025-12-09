@@ -17,7 +17,9 @@ import {
   PersonAdd as SignupIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
-  Lock as LockIcon
+  Lock as LockIcon,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import { Select, MenuItem } from '@mui/material';
 import OtpVerification from './OtpVerification';
@@ -42,6 +44,8 @@ const Signup = ({ onSignup }) => {
   const [showOtpDialog, setShowOtpDialog] = useState(false);
   const [showForgotPasswordDialog, setShowForgotPasswordDialog] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const countryCodes = [
     { code: '+1', flag: '🇺🇸', name: 'United States' },
@@ -807,7 +811,7 @@ const Signup = ({ onSignup }) => {
                       name="password"
                       required
                       fullWidth
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       id="password"
                       placeholder="Enter your password"
                       value={formData.password}
@@ -818,6 +822,23 @@ const Signup = ({ onSignup }) => {
                       InputProps={{
                         startAdornment: (
                           <LockIcon sx={{ color: '#667eea', mr: 1, fontSize: 20 }} />
+                        ),
+                        endAdornment: (
+                          <Box
+                            sx={{
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              mr: 1
+                            }}
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <VisibilityOff sx={{ color: '#667eea', fontSize: 20 }} />
+                            ) : (
+                              <Visibility sx={{ color: '#667eea', fontSize: 20 }} />
+                            )}
+                          </Box>
                         ),
                       }}
                       sx={{
@@ -876,7 +897,7 @@ const Signup = ({ onSignup }) => {
                       name="confirmPassword"
                       required
                       fullWidth
-                      type="password"
+                      type={showConfirmPassword ? 'text' : 'password'}
                       id="confirmPassword"
                       placeholder="Confirm your password"
                       value={formData.confirmPassword}
@@ -887,6 +908,23 @@ const Signup = ({ onSignup }) => {
                       InputProps={{
                         startAdornment: (
                           <LockIcon sx={{ color: '#667eea', mr: 1, fontSize: 20 }} />
+                        ),
+                        endAdornment: (
+                          <Box
+                            sx={{
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              mr: 1
+                            }}
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? (
+                              <VisibilityOff sx={{ color: '#667eea', fontSize: 20 }} />
+                            ) : (
+                              <Visibility sx={{ color: '#667eea', fontSize: 20 }} />
+                            )}
+                          </Box>
                         ),
                       }}
                       sx={{
