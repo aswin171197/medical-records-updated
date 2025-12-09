@@ -1,0 +1,849 @@
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Alert,
+  CircularProgress,
+  IconButton,
+} from '@mui/material';
+import {
+  Close as CloseIcon,
+  Phone as PhoneIcon,
+  Lock as LockIcon,
+  Send as SendIcon,
+} from '@mui/icons-material';
+import { Select, MenuItem } from '@mui/material';
+import axios from 'axios';
+
+const ForgotPassword = ({ open, onClose }) => {
+  const [step, setStep] = useState('request'); // 'request' or 'reset'
+  const [formData, setFormData] = useState({
+    mobile: '',
+    otp: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [generalError, setGeneralError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
+
+  const countryCodes = [
+    { code: '+1', flag: '🇺🇸', name: 'United States' },
+    { code: '+1', flag: '🇨🇦', name: 'Canada' },
+    { code: '+7', flag: '🇷🇺', name: 'Russia' },
+    { code: '+20', flag: '🇪🇬', name: 'Egypt' },
+    { code: '+27', flag: '🇿🇦', name: 'South Africa' },
+    { code: '+30', flag: '🇬🇷', name: 'Greece' },
+    { code: '+31', flag: '🇳🇱', name: 'Netherlands' },
+    { code: '+32', flag: '🇧🇪', name: 'Belgium' },
+    { code: '+33', flag: '🇫🇷', name: 'France' },
+    { code: '+34', flag: '🇪🇸', name: 'Spain' },
+    { code: '+36', flag: '🇭🇺', name: 'Hungary' },
+    { code: '+39', flag: '🇮🇹', name: 'Italy' },
+    { code: '+40', flag: '🇷🇴', name: 'Romania' },
+    { code: '+41', flag: '🇨🇭', name: 'Switzerland' },
+    { code: '+43', flag: '🇦🇹', name: 'Austria' },
+    { code: '+44', flag: '🇬🇧', name: 'United Kingdom' },
+    { code: '+45', flag: '🇩🇰', name: 'Denmark' },
+    { code: '+46', flag: '🇸🇪', name: 'Sweden' },
+    { code: '+47', flag: '🇳🇴', name: 'Norway' },
+    { code: '+48', flag: '🇵🇱', name: 'Poland' },
+    { code: '+49', flag: '🇩🇪', name: 'Germany' },
+    { code: '+51', flag: '🇵🇪', name: 'Peru' },
+    { code: '+52', flag: '🇲🇽', name: 'Mexico' },
+    { code: '+53', flag: '🇨🇺', name: 'Cuba' },
+    { code: '+54', flag: '🇦🇷', name: 'Argentina' },
+    { code: '+55', flag: '🇧🇷', name: 'Brazil' },
+    { code: '+56', flag: '🇨🇱', name: 'Chile' },
+    { code: '+57', flag: '🇨🇴', name: 'Colombia' },
+    { code: '+58', flag: '🇻🇪', name: 'Venezuela' },
+    { code: '+60', flag: '🇲🇾', name: 'Malaysia' },
+    { code: '+61', flag: '🇦🇺', name: 'Australia' },
+    { code: '+62', flag: '🇮🇩', name: 'Indonesia' },
+    { code: '+63', flag: '🇵🇭', name: 'Philippines' },
+    { code: '+64', flag: '🇳🇿', name: 'New Zealand' },
+    { code: '+65', flag: '🇸🇬', name: 'Singapore' },
+    { code: '+66', flag: '🇹🇭', name: 'Thailand' },
+    { code: '+81', flag: '🇯🇵', name: 'Japan' },
+    { code: '+82', flag: '🇰🇷', name: 'South Korea' },
+    { code: '+84', flag: '🇻🇳', name: 'Vietnam' },
+    { code: '+86', flag: '🇨🇳', name: 'China' },
+    { code: '+90', flag: '🇹🇷', name: 'Turkey' },
+    { code: '+91', flag: '🇮🇳', name: 'India' },
+    { code: '+92', flag: '🇵🇰', name: 'Pakistan' },
+    { code: '+93', flag: '🇦🇫', name: 'Afghanistan' },
+    { code: '+94', flag: '🇱🇰', name: 'Sri Lanka' },
+    { code: '+95', flag: '🇲🇲', name: 'Myanmar' },
+    { code: '+98', flag: '🇮🇷', name: 'Iran' },
+    { code: '+212', flag: '🇲🇦', name: 'Morocco' },
+    { code: '+213', flag: '🇩🇿', name: 'Algeria' },
+    { code: '+216', flag: '🇹🇳', name: 'Tunisia' },
+    { code: '+218', flag: '🇱🇾', name: 'Libya' },
+    { code: '+220', flag: '🇬🇲', name: 'Gambia' },
+    { code: '+221', flag: '🇸🇳', name: 'Senegal' },
+    { code: '+222', flag: '🇲🇷', name: 'Mauritania' },
+    { code: '+223', flag: '🇲🇱', name: 'Mali' },
+    { code: '+224', flag: '🇬🇳', name: 'Guinea' },
+    { code: '+225', flag: '🇨🇮', name: 'Ivory Coast' },
+    { code: '+226', flag: '🇧🇫', name: 'Burkina Faso' },
+    { code: '+227', flag: '🇳🇪', name: 'Niger' },
+    { code: '+228', flag: '🇹🇬', name: 'Togo' },
+    { code: '+229', flag: '🇧🇯', name: 'Benin' },
+    { code: '+230', flag: '🇲🇺', name: 'Mauritius' },
+    { code: '+231', flag: '🇱🇷', name: 'Liberia' },
+    { code: '+232', flag: '🇸🇱', name: 'Sierra Leone' },
+    { code: '+233', flag: '🇬🇭', name: 'Ghana' },
+    { code: '+234', flag: '🇳🇬', name: 'Nigeria' },
+    { code: '+235', flag: '🇹🇩', name: 'Chad' },
+    { code: '+236', flag: '🇨🇫', name: 'Central African Republic' },
+    { code: '+237', flag: '🇨🇲', name: 'Cameroon' },
+    { code: '+238', flag: '🇨🇻', name: 'Cape Verde' },
+    { code: '+239', flag: '🇸🇹', name: 'São Tomé and Príncipe' },
+    { code: '+240', flag: '🇬🇶', name: 'Equatorial Guinea' },
+    { code: '+241', flag: '🇬🇦', name: 'Gabon' },
+    { code: '+242', flag: '🇨🇬', name: 'Republic of the Congo' },
+    { code: '+243', flag: '🇨🇩', name: 'Democratic Republic of the Congo' },
+    { code: '+244', flag: '🇦🇴', name: 'Angola' },
+    { code: '+245', flag: '🇬🇼', name: 'Guinea-Bissau' },
+    { code: '+246', flag: '🇮🇴', name: 'British Indian Ocean Territory' },
+    { code: '+248', flag: '🇸🇨', name: 'Seychelles' },
+    { code: '+249', flag: '🇸🇩', name: 'Sudan' },
+    { code: '+250', flag: '🇷🇼', name: 'Rwanda' },
+    { code: '+251', flag: '🇪🇹', name: 'Ethiopia' },
+    { code: '+252', flag: '🇸🇴', name: 'Somalia' },
+    { code: '+253', flag: '🇩🇯', name: 'Djibouti' },
+    { code: '+254', flag: '🇰🇪', name: 'Kenya' },
+    { code: '+255', flag: '🇹🇿', name: 'Tanzania' },
+    { code: '+256', flag: '🇺🇬', name: 'Uganda' },
+    { code: '+257', flag: '🇧🇮', name: 'Burundi' },
+    { code: '+258', flag: '🇲🇿', name: 'Mozambique' },
+    { code: '+260', flag: '🇿🇲', name: 'Zambia' },
+    { code: '+261', flag: '🇲🇬', name: 'Madagascar' },
+    { code: '+262', flag: '🇷🇪', name: 'Réunion' },
+    { code: '+263', flag: '🇿🇼', name: 'Zimbabwe' },
+    { code: '+264', flag: '🇳🇦', name: 'Namibia' },
+    { code: '+265', flag: '🇲🇼', name: 'Malawi' },
+    { code: '+266', flag: '🇱🇸', name: 'Lesotho' },
+    { code: '+267', flag: '🇧🇼', name: 'Botswana' },
+    { code: '+268', flag: '🇸🇿', name: 'Eswatini' },
+    { code: '+269', flag: '🇰🇲', name: 'Comoros' },
+    { code: '+290', flag: '🇸🇭', name: 'Saint Helena' },
+    { code: '+291', flag: '🇪🇷', name: 'Eritrea' },
+    { code: '+297', flag: '🇦🇼', name: 'Aruba' },
+    { code: '+298', flag: '🇫🇴', name: 'Faroe Islands' },
+    { code: '+299', flag: '🇬🇱', name: 'Greenland' },
+    { code: '+350', flag: '🇬🇮', name: 'Gibraltar' },
+    { code: '+351', flag: '🇵🇹', name: 'Portugal' },
+    { code: '+352', flag: '🇱🇺', name: 'Luxembourg' },
+    { code: '+353', flag: '🇮🇪', name: 'Ireland' },
+    { code: '+354', flag: '🇮🇸', name: 'Iceland' },
+    { code: '+355', flag: '🇦🇱', name: 'Albania' },
+    { code: '+356', flag: '🇲🇹', name: 'Malta' },
+    { code: '+357', flag: '🇨🇾', name: 'Cyprus' },
+    { code: '+358', flag: '🇫🇮', name: 'Finland' },
+    { code: '+359', flag: '🇧🇬', name: 'Bulgaria' },
+    { code: '+370', flag: '🇱🇹', name: 'Lithuania' },
+    { code: '+371', flag: '🇱🇻', name: 'Latvia' },
+    { code: '+372', flag: '🇪🇪', name: 'Estonia' },
+    { code: '+373', flag: '🇲🇩', name: 'Moldova' },
+    { code: '+374', flag: '🇦🇲', name: 'Armenia' },
+    { code: '+375', flag: '🇧🇾', name: 'Belarus' },
+    { code: '+376', flag: '🇦🇩', name: 'Andorra' },
+    { code: '+377', flag: '🇲🇨', name: 'Monaco' },
+    { code: '+378', flag: '🇸🇲', name: 'San Marino' },
+    { code: '+380', flag: '🇺🇦', name: 'Ukraine' },
+    { code: '+381', flag: '🇷🇸', name: 'Serbia' },
+    { code: '+382', flag: '🇲🇪', name: 'Montenegro' },
+    { code: '+383', flag: '🇽🇰', name: 'Kosovo' },
+    { code: '+385', flag: '🇭🇷', name: 'Croatia' },
+    { code: '+386', flag: '🇸🇮', name: 'Slovenia' },
+    { code: '+387', flag: '🇧🇦', name: 'Bosnia and Herzegovina' },
+    { code: '+389', flag: '🇲🇰', name: 'North Macedonia' },
+    { code: '+420', flag: '🇨🇿', name: 'Czech Republic' },
+    { code: '+421', flag: '🇸🇰', name: 'Slovakia' },
+    { code: '+423', flag: '🇱🇮', name: 'Liechtenstein' },
+    { code: '+500', flag: '🇫🇰', name: 'Falkland Islands' },
+    { code: '+501', flag: '🇧🇿', name: 'Belize' },
+    { code: '+502', flag: '🇬🇹', name: 'Guatemala' },
+    { code: '+503', flag: '🇸🇻', name: 'El Salvador' },
+    { code: '+504', flag: '🇭🇳', name: 'Honduras' },
+    { code: '+505', flag: '🇳🇮', name: 'Nicaragua' },
+    { code: '+506', flag: '🇨🇷', name: 'Costa Rica' },
+    { code: '+507', flag: '🇵🇦', name: 'Panama' },
+    { code: '+508', flag: '🇵🇲', name: 'Saint Pierre and Miquelon' },
+    { code: '+509', flag: '🇭🇹', name: 'Haiti' },
+    { code: '+590', flag: '🇬🇵', name: 'Guadeloupe' },
+    { code: '+591', flag: '🇧🇴', name: 'Bolivia' },
+    { code: '+592', flag: '🇬🇾', name: 'Guyana' },
+    { code: '+593', flag: '🇪🇨', name: 'Ecuador' },
+    { code: '+594', flag: '🇬🇫', name: 'French Guiana' },
+    { code: '+595', flag: '🇵🇾', name: 'Paraguay' },
+    { code: '+596', flag: '🇲🇶', name: 'Martinique' },
+    { code: '+597', flag: '🇸🇷', name: 'Suriname' },
+    { code: '+598', flag: '🇺🇾', name: 'Uruguay' },
+    { code: '+599', flag: '🇧🇶', name: 'Caribbean Netherlands' },
+    { code: '+670', flag: '🇹🇱', name: 'East Timor' },
+    { code: '+672', flag: '🇦🇶', name: 'Antarctica' },
+    { code: '+673', flag: '🇧🇳', name: 'Brunei' },
+    { code: '+674', flag: '🇳🇷', name: 'Nauru' },
+    { code: '+675', flag: '🇵🇬', name: 'Papua New Guinea' },
+    { code: '+676', flag: '🇹🇴', name: 'Tonga' },
+    { code: '+677', flag: '🇸🇧', name: 'Solomon Islands' },
+    { code: '+678', flag: '🇻🇺', name: 'Vanuatu' },
+    { code: '+679', flag: '🇫🇯', name: 'Fiji' },
+    { code: '+680', flag: '🇵🇼', name: 'Palau' },
+    { code: '+681', flag: '🇼🇫', name: 'Wallis and Futuna' },
+    { code: '+682', flag: '🇨🇰', name: 'Cook Islands' },
+    { code: '+683', flag: '🇳🇺', name: 'Niue' },
+    { code: '+684', flag: '🇦🇸', name: 'American Samoa' },
+    { code: '+685', flag: '🇼🇸', name: 'Samoa' },
+    { code: '+686', flag: '🇰🇮', name: 'Kiribati' },
+    { code: '+687', flag: '🇳🇨', name: 'New Caledonia' },
+    { code: '+688', flag: '🇹🇻', name: 'Tuvalu' },
+    { code: '+689', flag: '🇵🇫', name: 'French Polynesia' },
+    { code: '+690', flag: '🇹🇰', name: 'Tokelau' },
+    { code: '+691', flag: '🇫🇲', name: 'Micronesia' },
+    { code: '+692', flag: '🇲🇭', name: 'Marshall Islands' },
+    { code: '+850', flag: '🇰🇵', name: 'North Korea' },
+    { code: '+852', flag: '🇭🇰', name: 'Hong Kong' },
+    { code: '+853', flag: '🇲🇴', name: 'Macau' },
+    { code: '+855', flag: '🇰🇭', name: 'Cambodia' },
+    { code: '+856', flag: '🇱🇦', name: 'Laos' },
+    { code: '+880', flag: '🇧🇩', name: 'Bangladesh' },
+    { code: '+886', flag: '🇹🇼', name: 'Taiwan' },
+    { code: '+960', flag: '🇲🇻', name: 'Maldives' },
+    { code: '+961', flag: '🇱🇧', name: 'Lebanon' },
+    { code: '+962', flag: '🇯🇴', name: 'Jordan' },
+    { code: '+963', flag: '🇸🇾', name: 'Syria' },
+    { code: '+964', flag: '🇮🇶', name: 'Iraq' },
+    { code: '+965', flag: '🇰🇼', name: 'Kuwait' },
+    { code: '+966', flag: '🇸🇦', name: 'Saudi Arabia' },
+    { code: '+967', flag: '🇾🇪', name: 'Yemen' },
+    { code: '+968', flag: '🇴🇲', name: 'Oman' },
+    { code: '+970', flag: '🇵🇸', name: 'Palestine' },
+    { code: '+971', flag: '🇦🇪', name: 'United Arab Emirates' },
+    { code: '+972', flag: '🇮🇱', name: 'Israel' },
+    { code: '+973', flag: '🇧🇭', name: 'Bahrain' },
+    { code: '+974', flag: '🇶🇦', name: 'Qatar' },
+    { code: '+975', flag: '🇧🇹', name: 'Bhutan' },
+    { code: '+976', flag: '🇲🇳', name: 'Mongolia' },
+    { code: '+977', flag: '🇳🇵', name: 'Nepal' },
+    { code: '+992', flag: '🇹🇯', name: 'Tajikistan' },
+    { code: '+993', flag: '🇹🇲', name: 'Turkmenistan' },
+    { code: '+994', flag: '🇦🇿', name: 'Azerbaijan' },
+    { code: '+995', flag: '🇬🇪', name: 'Georgia' },
+    { code: '+996', flag: '🇰🇬', name: 'Kyrgyzstan' },
+    { code: '+998', flag: '🇺🇿', name: 'Uzbekistan' },
+  ];
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateMobile = () => {
+    const newErrors = {};
+    if (!formData.mobile.trim()) {
+      newErrors.mobile = 'Mobile number is required';
+    } else {
+      const cleanNumber = formData.mobile.replace(/\D/g, '');
+      if (cleanNumber.length < 10 || cleanNumber.length > 15) {
+        newErrors.mobile = 'Please enter a valid mobile number (10-15 digits)';
+      }
+    }
+    return newErrors;
+  };
+
+  const validateResetForm = () => {
+    const newErrors = {};
+    if (!formData.otp.trim()) {
+      newErrors.otp = 'OTP is required';
+    } else if (formData.otp.length !== 6 || !/^\d{6}$/.test(formData.otp)) {
+      newErrors.otp = 'Please enter a valid 6-digit OTP';
+    }
+
+    if (!formData.newPassword) {
+      newErrors.newPassword = 'New password is required';
+    } else if (formData.newPassword.length < 6) {
+      newErrors.newPassword = 'Password must be at least 6 characters long';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.newPassword !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    return newErrors;
+  };
+
+  const handleRequestOtp = async () => {
+    setGeneralError('');
+    setSuccessMessage('');
+
+    const validationErrors = validateMobile();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post('https://consumer-dev-363382968588.asia-south1.run.app/auth/forgot-password', {
+        mobile: countryCode + formData.mobile.replace(/\D/g, '') // Combine country code with mobile
+      });
+      setSuccessMessage('Password reset OTP sent successfully to your WhatsApp.');
+      setStep('reset');
+    } catch (error) {
+      setGeneralError(error.response?.data?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setGeneralError('');
+    setSuccessMessage('');
+
+    const validationErrors = validateResetForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post('https://consumer-dev-363382968588.asia-south1.run.app/auth/reset-password', {
+        mobile: countryCode + formData.mobile.replace(/\D/g, ''), // Combine country code with mobile
+        otp: formData.otp,
+        newPassword: formData.newPassword
+      });
+      setSuccessMessage('Password reset successfully! You can now login with your new password.');
+      setTimeout(() => {
+        handleClose();
+      }, 3000);
+    } catch (error) {
+      setGeneralError(error.response?.data?.message || 'Failed to reset password. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setStep('request');
+    setFormData({
+      mobile: '',
+      otp: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setErrors({});
+    setGeneralError('');
+    setSuccessMessage('');
+    onClose();
+  };
+
+  const handleBackToRequest = () => {
+    setStep('request');
+    setFormData(prev => ({
+      ...prev,
+      otp: '',
+      newPassword: '',
+      confirmPassword: ''
+    }));
+    setErrors({});
+    setGeneralError('');
+    setSuccessMessage('');
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          background: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: 3,
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
+            backgroundSize: '200% 100%',
+            animation: 'gradientShift 3s ease-in-out infinite',
+          },
+          '@keyframes gradientShift': {
+            '0%': { backgroundPosition: '0% 50%' },
+            '50%': { backgroundPosition: '100% 50%' },
+            '100%': { backgroundPosition: '0% 50%' },
+          }
+        }
+      }}
+    >
+      <DialogTitle sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        pb: 1
+      }}>
+        <Box sx={{ textAlign: 'center', flex: 1 }}>
+          <Typography
+            variant="h5"
+            component="div"
+            sx={{
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 0.5
+            }}
+          >
+            {step === 'request' ? 'Forgot Password' : 'Reset Password'}
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: '#6b7280',
+              fontSize: '0.9rem'
+            }}
+          >
+            {step === 'request' ? 'Reset your password securely' : 'Enter your new password'}
+          </Typography>
+        </Box>
+        <IconButton
+          onClick={handleClose}
+          sx={{
+            color: '#6b7280',
+            '&:hover': {
+              backgroundColor: 'rgba(102, 126, 234, 0.08)',
+              color: '#667eea'
+            }
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ px: 3, pb: 2 }}>
+        {/* General Error Alert */}
+        {generalError && (
+          <Alert
+            severity="error"
+            sx={{
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(244, 67, 54, 0.15)',
+              '& .MuiAlert-icon': {
+                color: '#f44336',
+              },
+            }}
+          >
+            {generalError}
+          </Alert>
+        )}
+
+        {/* Success Message */}
+        {successMessage && (
+          <Alert
+            severity="success"
+            sx={{
+              mb: 3,
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.15)',
+              '& .MuiAlert-icon': {
+                color: '#4caf50',
+              },
+            }}
+          >
+            {successMessage}
+          </Alert>
+        )}
+
+        {step === 'request' ? (
+          <Box>
+            <Typography
+              variant="body1"
+              sx={{
+                mb: 3,
+                color: '#6b7280',
+                textAlign: 'center',
+                fontSize: '0.95rem'
+              }}
+            >
+              Enter your registered mobile number to receive a password reset OTP via WhatsApp.
+            </Typography>
+
+            <Typography
+              variant="subtitle1"
+              sx={{
+                mb: 1.5,
+                color: '#374151',
+                fontWeight: 600,
+                fontSize: '0.95rem'
+              }}
+            >
+              Mobile Number
+            </Typography>
+            <TextField
+              fullWidth
+              name="mobile"
+              placeholder="Enter your mobile number"
+              value={formData.mobile}
+              onChange={handleChange}
+              error={!!errors.mobile}
+              helperText={errors.mobile}
+              disabled={isLoading}
+              InputProps={{
+                startAdornment: (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
+                    <PhoneIcon sx={{ color: '#667eea', fontSize: 20 }} />
+                    <Select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      disabled={isLoading}
+                      variant="standard"
+                      disableUnderline
+                      sx={{
+                        width: 65,
+                        '& .MuiSelect-select': {
+                          padding: '2px 4px',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'transparent',
+                          color: '#667eea',
+                          fontWeight: 600,
+                        },
+                        '& .MuiSelect-icon': {
+                          color: '#667eea',
+                          right: 0,
+                          fontSize: '1rem',
+                        },
+                      }}
+                    >
+                      {countryCodes.map((country) => (
+                        <MenuItem key={country.code} value={country.code}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <span>{country.flag}</span>
+                            <span style={{ fontSize: '0.8rem' }}>{country.code}</span>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </Box>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 2,
+                  transition: 'all 0.2s ease-in-out',
+                  '& fieldset': {
+                    borderColor: '#e2e8f0',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#667eea',
+                    borderWidth: '2px',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#667eea',
+                    borderWidth: '2px',
+                    boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: 'white',
+                  }
+                },
+                '& .MuiFormHelperText-root': {
+                  color: '#ef4444',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  marginTop: '6px',
+                  marginLeft: 0,
+                },
+                '& .MuiOutlinedInput-input': {
+                  padding: '16px 14px',
+                  fontSize: '0.95rem',
+                  color: '#374151',
+                },
+              }}
+            />
+          </Box>
+        ) : (
+          <Box>
+            <Typography
+              variant="body1"
+              sx={{
+                mb: 3,
+                color: '#6b7280',
+                textAlign: 'center',
+                fontSize: '0.95rem'
+              }}
+            >
+              Enter the OTP sent to your WhatsApp and your new password.
+            </Typography>
+
+            <Typography
+              variant="subtitle1"
+              sx={{
+                mb: 1.5,
+                color: '#374151',
+                fontWeight: 600,
+                fontSize: '0.95rem'
+              }}
+            >
+              OTP
+            </Typography>
+            <TextField
+              fullWidth
+              name="otp"
+              placeholder="Enter 6-digit OTP"
+              value={formData.otp}
+              onChange={handleChange}
+              error={!!errors.otp}
+              helperText={errors.otp}
+              disabled={isLoading}
+              inputProps={{ maxLength: 6 }}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 2,
+                  transition: 'all 0.2s ease-in-out',
+                  '& fieldset': {
+                    borderColor: '#e2e8f0',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#667eea',
+                    borderWidth: '2px',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#667eea',
+                    borderWidth: '2px',
+                    boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: 'white',
+                  }
+                },
+                '& .MuiFormHelperText-root': {
+                  color: '#ef4444',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  marginTop: '6px',
+                  marginLeft: 0,
+                },
+                '& .MuiOutlinedInput-input': {
+                  padding: '16px 14px',
+                  fontSize: '0.95rem',
+                  color: '#374151',
+                  textAlign: 'center',
+                  fontWeight: 600,
+                  letterSpacing: '0.5rem',
+                },
+              }}
+            />
+
+            <Typography
+              variant="subtitle1"
+              sx={{
+                mb: 1.5,
+                color: '#374151',
+                fontWeight: 600,
+                fontSize: '0.95rem'
+              }}
+            >
+              New Password
+            </Typography>
+            <TextField
+              fullWidth
+              name="newPassword"
+              type="password"
+              placeholder="Enter your new password"
+              value={formData.newPassword}
+              onChange={handleChange}
+              error={!!errors.newPassword}
+              helperText={errors.newPassword}
+              disabled={isLoading}
+              InputProps={{
+                startAdornment: (
+                  <LockIcon sx={{ color: '#667eea', mr: 1, fontSize: 20 }} />
+                ),
+              }}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 2,
+                  transition: 'all 0.2s ease-in-out',
+                  '& fieldset': {
+                    borderColor: '#e2e8f0',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#667eea',
+                    borderWidth: '2px',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#667eea',
+                    borderWidth: '2px',
+                    boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: 'white',
+                  }
+                },
+                '& .MuiFormHelperText-root': {
+                  color: '#ef4444',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  marginTop: '6px',
+                  marginLeft: 0,
+                },
+                '& .MuiOutlinedInput-input': {
+                  padding: '16px 14px',
+                  fontSize: '0.95rem',
+                  color: '#374151',
+                },
+              }}
+            />
+
+            <Typography
+              variant="subtitle1"
+              sx={{
+                mb: 1.5,
+                color: '#374151',
+                fontWeight: 600,
+                fontSize: '0.95rem'
+              }}
+            >
+              Confirm New Password
+            </Typography>
+            <TextField
+              fullWidth
+              name="confirmPassword"
+              type="password"
+              placeholder="Confirm your new password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              error={!!errors.confirmPassword}
+              helperText={errors.confirmPassword}
+              disabled={isLoading}
+              InputProps={{
+                startAdornment: (
+                  <LockIcon sx={{ color: '#667eea', mr: 1, fontSize: 20 }} />
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 2,
+                  transition: 'all 0.2s ease-in-out',
+                  '& fieldset': {
+                    borderColor: '#e2e8f0',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#667eea',
+                    borderWidth: '2px',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#667eea',
+                    borderWidth: '2px',
+                    boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: 'white',
+                  }
+                },
+                '& .MuiFormHelperText-root': {
+                  color: '#ef4444',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  marginTop: '6px',
+                  marginLeft: 0,
+                },
+                '& .MuiOutlinedInput-input': {
+                  padding: '16px 14px',
+                  fontSize: '0.95rem',
+                  color: '#374151',
+                },
+              }}
+            />
+          </Box>
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ p: 3, pt: 0 }}>
+        {step === 'reset' && (
+          <Button
+            onClick={handleBackToRequest}
+            disabled={isLoading}
+            sx={{ color: '#333', mr: 1 }}
+          >
+            Back
+          </Button>
+        )}
+
+        <Button
+          onClick={handleClose}
+          disabled={isLoading}
+          sx={{ color: '#333' }}
+        >
+          Cancel
+        </Button>
+
+        <Button
+          onClick={step === 'request' ? handleRequestOtp : handleResetPassword}
+          variant="contained"
+          disabled={isLoading}
+          startIcon={isLoading ? <CircularProgress size={16} /> : step === 'request' ? <SendIcon /> : <LockIcon />}
+          sx={{
+            backgroundColor: 'white',
+            color: '#667eea',
+            fontWeight: 'bold',
+            '&:hover': {
+              backgroundColor: '#f5f5f5',
+            }
+          }}
+        >
+          {isLoading
+            ? (step === 'request' ? 'Sending...' : 'Resetting...')
+            : (step === 'request' ? 'Send OTP' : 'Reset Password')
+          }
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export default ForgotPassword;
