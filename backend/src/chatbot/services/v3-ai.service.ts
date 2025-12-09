@@ -107,39 +107,23 @@ export class V3AiService {
     }
   }
 
-  /** Summarize/truncate medicalData and attach as systemInstruction */
+  /** Use full medicalData as systemInstruction */
   private getAIConfig(medicalData?: string): LiveConnectConfig {
-    const MAX_PART_LEN = Number(process.env.MAX_SYSTEM_PART_CHARS || 8000);
+    const MAX_PART_LEN = Number(process.env.MAX_SYSTEM_PART_CHARS || 15000);
     const systemParts: { text: string }[] = [];
 
     // Base system instruction
     systemParts.push({ text: BASE_PROMPT });
 
     if (medicalData) {
-      // Extract key lab values from the medical context
-      const text = String(medicalData);
-      const labResults: string[] = [];
+      let fullData = String(medicalData);
 
-      // Extract lab results using regex
-      const labPattern = /- TEST: ([^\n]+)\n\s*- Date: ([^\n]+)\n\s*- Result: ([^\n]+)\n\s*- Reference Range: ([^\n]+)\n\s*- Flag\/Status: ([^\n]+)/g;
-      let match;
-      while ((match = labPattern.exec(text)) !== null) {
-        const [_, testName, date, result, refRange, flag] = match;
-        labResults.push(`${testName}: ${result} (Ref: ${refRange}, ${flag}) - ${date}`);
+      // Truncate if too long, but keep as much as possible
+      if (fullData.length > MAX_PART_LEN) {
+        fullData = fullData.slice(0, MAX_PART_LEN) + '...[TRUNCATED DUE TO LENGTH LIMITS]';
       }
 
-      let summary = '';
-      if (labResults.length > 0) {
-        summary = `PATIENT LAB RESULTS (${labResults.length} tests found):\n${labResults.slice(0, 20).join('\n')}`;
-        if (labResults.length > 20) summary += `\n...and ${labResults.length - 20} more tests`;
-      } else {
-        // Fallback to text slice if no structured data found
-        summary = text.slice(0, 4000) + '...[TRUNCATED]';
-      }
-
-      if (summary.length > MAX_PART_LEN) summary = summary.slice(0, MAX_PART_LEN) + '...[TRUNCATED]';
-
-      const systemText = `PATIENT MEDICAL DATA:\n${summary}\n\nAnswer questions using this data. For lab values, provide exact results, dates, and reference ranges.`;
+      const systemText = `COMPLETE PATIENT MEDICAL CONTEXT:\n\n${fullData}\n\nUse ALL the above medical data to answer user questions. Provide exact lab values, dates, reference ranges, and clinical details from the records.`;
       systemParts.push({ text: systemText });
     }
 
@@ -152,7 +136,7 @@ export class V3AiService {
 
     try {
       this.logger.debug(`getAIConfig: responseModalities=${config.responseModalities}, systemPartsCount=${systemParts.length}`);
-      if (systemParts.length > 1) this.logger.debug(`systemPart sample: ${systemParts[1].text.slice(0, 400)}`);
+      if (systemParts.length > 1) this.logger.debug(`systemPart length: ${systemParts[1].text.length}`);
     } catch {}
 
     return config;
