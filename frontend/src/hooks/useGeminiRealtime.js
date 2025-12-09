@@ -303,7 +303,7 @@ export default function useGeminiRealtime() {
     // Include medical context directly in the message if available
     let enhancedText = text;
     if (medicalContext && medicalContext.trim()) {
-      enhancedText = `MEDICAL CONTEXT:\n${medicalContext}\n\nUSER QUESTION: ${text}\n\nPlease answer the user's question based on the medical context provided above. If the user is asking about specific lab values like RBC, hemoglobin, glucose, etc., look for those values in the medical context and provide specific information about their results, reference ranges, and any abnormal flags.`;
+      enhancedText = `MEDICAL CONTEXT:\n${medicalContext}\n\nUSER QUESTION: ${text}\n\nIMPORTANT INSTRUCTIONS:\n1. If the user asks about "RBC" or "red blood cells", check for RBC count, hemoglobin, hematocrit, or related blood parameters in the medical context\n2. If the exact test isn't available but related tests are (e.g., user asks for RBC but only hemoglobin is available), explain the relationship and provide the available related results\n3. Always provide specific values, dates, reference ranges, and flag status from the medical context\n4. If asking about lab results in general, list ALL available lab values with their results and interpretations\n5. Be specific and detailed about the actual medical data provided`;
       console.log('[useGeminiRealtime] Enhanced text length:', enhancedText.length);
     } else {
       console.log('[useGeminiRealtime] No medical context available, sending text as-is');

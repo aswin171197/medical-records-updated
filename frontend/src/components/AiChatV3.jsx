@@ -605,7 +605,7 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
         const isLabQuery = labKeywords.some(keyword => userInput.toLowerCase().includes(keyword));
         
         if (isLabQuery) {
-          const contextMessage = `USER QUESTION: ${userInput}\n\nNOTE: The user is asking about lab values but no medical records are currently available in their profile. Please provide general information about the requested lab parameter, including normal ranges, what it measures, and suggest that they upload their medical records for personalized analysis.`;
+          const contextMessage = `USER QUESTION: ${userInput}\n\nNOTE: The user is asking about lab values but no medical records are currently available in their profile. Please provide general information about the requested lab parameter (like RBC, hemoglobin, etc.), including normal ranges, what it measures, clinical significance, and suggest that they upload their medical records for personalized analysis of their specific results.`;
           sendTextPart(contextMessage, '');
         } else {
           sendTextPart(userInput, medicalData);
