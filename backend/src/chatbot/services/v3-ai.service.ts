@@ -9,8 +9,14 @@ import {
 } from '@google/genai';
 
 const BASE_PROMPT =
-  'You are a medical AI assistant. Use ONLY the provided patient context. ' +
-  'If a value or report is not found, say so. Never guess.';
+  'You are a medical AI assistant. Your primary role is to answer user questions using ONLY the provided patient medical context.\n\n' +
+  'INSTRUCTIONS:\n' +
+  '- When users ask about specific lab values (like RBC, hemoglobin, WBC, creatinine, etc.), provide the exact values, dates, reference ranges, and flags from their medical records.\n' +
+  '- When users ask about symptoms, diagnoses, or treatments, reference the relevant medical records with dates.\n' +
+  '- Always be specific and cite sources when possible.\n' +
+  '- If information is not in the provided context, say "I don\'t have that information in your medical records."\n' +
+  '- Never make up or guess information.\n' +
+  '- Keep responses clear and medical-professional in tone.';
 
 export interface GeminiLiveCallbacks {
   // keep the camelCase callbacks that the rest of your backend (BotGateway) uses
@@ -103,46 +109,37 @@ export class V3AiService {
 
   /** Summarize/truncate medicalData and attach as systemInstruction */
   private getAIConfig(medicalData?: string): LiveConnectConfig {
-    const MAX_PART_LEN = Number(process.env.MAX_SYSTEM_PART_CHARS || 14000);
+    const MAX_PART_LEN = Number(process.env.MAX_SYSTEM_PART_CHARS || 8000);
     const systemParts: { text: string }[] = [];
 
     // Base system instruction
-    const baseInstruction =
-      BASE_PROMPT +
-      '\nYou are a medical assistant. Provide evidence-based, careful answers and cite the record/file and date when referencing lab values or imaging impressions.';
-    systemParts.push({ text: baseInstruction });
+    systemParts.push({ text: BASE_PROMPT });
 
     if (medicalData) {
-      let summary = '';
-      try {
-        // Try JSON summarization if possible
-        const parsed = JSON.parse(medicalData);
-        if (Array.isArray(parsed)) {
-          const recCount = parsed.length;
-          const topLines = parsed.slice(0, 5).map((r: any, i: number) => {
-            const title = r.title || r.fileName || `Record ${i + 1}`;
-            const invCount = (r.extractedData?.investigations?.length ?? r.extraction?.investigations?.length) || 0;
-            const imgCount = (r.extractedData?.imaging_radiology_reports?.length ?? r.extraction?.imaging_radiology_reports?.length) || 0;
-            return `- ${title}: ${invCount} lab tests, ${imgCount} imaging reports`;
-          }).join('\n');
-          summary = `Patient has ${recCount} extracted medical records. Top records:\n${topLines}`;
-        } else if (typeof parsed === 'object') {
-          const keys = Object.keys(parsed).slice(0, 20);
-          const invCount = parsed.investigations?.length ?? 0;
-          const imgCount = parsed.imaging_radiology_reports?.length ?? 0;
-          summary = `Structured record: ${invCount} lab tests, ${imgCount} imaging reports. Keys: ${keys.join(', ')}`;
-        } else {
-          summary = String(parsed).slice(0, 1000);
-        }
-      } catch (e) {
-        // not JSON, use text slice
-        summary = String(medicalData).slice(0, 12000);
+      // Extract key lab values from the medical context
+      const text = String(medicalData);
+      const labResults: string[] = [];
+
+      // Extract lab results using regex
+      const labPattern = /- TEST: ([^\n]+)\n\s*- Date: ([^\n]+)\n\s*- Result: ([^\n]+)\n\s*- Reference Range: ([^\n]+)\n\s*- Flag\/Status: ([^\n]+)/g;
+      let match;
+      while ((match = labPattern.exec(text)) !== null) {
+        const [_, testName, date, result, refRange, flag] = match;
+        labResults.push(`${testName}: ${result} (Ref: ${refRange}, ${flag}) - ${date}`);
       }
 
-      if (!summary) summary = String(medicalData).slice(0, 12000);
+      let summary = '';
+      if (labResults.length > 0) {
+        summary = `PATIENT LAB RESULTS (${labResults.length} tests found):\n${labResults.slice(0, 20).join('\n')}`;
+        if (labResults.length > 20) summary += `\n...and ${labResults.length - 20} more tests`;
+      } else {
+        // Fallback to text slice if no structured data found
+        summary = text.slice(0, 4000) + '...[TRUNCATED]';
+      }
+
       if (summary.length > MAX_PART_LEN) summary = summary.slice(0, MAX_PART_LEN) + '...[TRUNCATED]';
 
-      const systemText = `USE THIS PATIENT CONTEXT CAREFULLY:\n${summary}\n\nIf the user asks for specific lab values or imaging impressions, answer using only the information above and when possible mention the record/file and date. If data is not present, say you could not find it in the provided records.`;
+      const systemText = `PATIENT MEDICAL DATA:\n${summary}\n\nAnswer questions using this data. For lab values, provide exact results, dates, and reference ranges.`;
       systemParts.push({ text: systemText });
     }
 
