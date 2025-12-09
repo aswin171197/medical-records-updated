@@ -309,7 +309,10 @@ const EMRAnalysisInterface = ({
                     result: inv.result || '',
                     unit: inv.unit || '',
                     reference_range: inv.reference_range || '',
-                    flag: inv.flag || 'NORMAL',
+                    flag: (inv.flag === 'NORMAL' || inv.flag === 'N') ? 'Normal' : 
+                          (inv.flag === 'HIGH' || inv.flag === 'H') ? 'High' : 
+                          (inv.flag === 'LOW' || inv.flag === 'L') ? 'Low' : 
+                          inv.flag || 'Normal',
                     raw_data: inv
                   };
                 });
@@ -713,12 +716,11 @@ const EMRAnalysisInterface = ({
                                            onChange={(e) => updateInvestigation(index, 'flag', e.target.value)}
                                            sx={{ width: '100px' }}
                                          >
-                                           <MenuItem value="NORMAL">NORMAL</MenuItem>
-                                           <MenuItem value="HIGH">HIGH</MenuItem>
-                                           <MenuItem value="LOW">LOW</MenuItem>
-                                           <MenuItem value="H">H</MenuItem>
-                                           <MenuItem value="L">L</MenuItem>
-                                           <MenuItem value="N">N</MenuItem>
+                                           <MenuItem value="Normal">Normal</MenuItem>
+                                           <MenuItem value="High">High</MenuItem>
+                                           <MenuItem value="Low">Low</MenuItem>
+                                           <MenuItem value="BorderlineHigh">Borderline High</MenuItem>
+                                           <MenuItem value="BorderlineLow">Borderline Low</MenuItem>
                                          </Select>
                                        ) : (
                                          <Chip

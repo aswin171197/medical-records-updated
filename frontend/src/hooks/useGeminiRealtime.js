@@ -289,12 +289,19 @@ export default function useGeminiRealtime() {
     }
   }, []);
 
-  const sendTextPart = useCallback((text) => {
+  const sendTextPart = useCallback((text, medicalContext) => {
     if (!socketRef.current || !socketRef.current.connected) {
       console.warn('[useGeminiRealtime] cannot send text: socket not connected');
       return;
     }
-    socketRef.current.emit('send-text', text);
+    
+    // Include medical context directly in the message if available
+    let enhancedText = text;
+    if (medicalContext && medicalContext.trim()) {
+      enhancedText = `MEDICAL CONTEXT:\n${medicalContext}\n\nUSER QUESTION: ${text}\n\nPlease answer the user's question based on the medical context provided above.`;
+    }
+    
+    socketRef.current.emit('send-text', enhancedText);
   }, []);
 
   const sendAudioChunk = useCallback((audioPayload) => {
