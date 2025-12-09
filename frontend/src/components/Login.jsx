@@ -402,7 +402,7 @@ const sendOtp = async () => {
     });
     return response.data;
   } catch (error) {
-    if (error.response?.status === 404) {
+    if (error.response?.status === 404 || (error.response?.status === 401 && error.response?.data?.message?.includes('not found'))) {
       throw new Error('Mobile number not found. Please check your mobile number or sign up for a new account.');
     }
     throw error;
@@ -453,7 +453,7 @@ const performPasswordLogin = async () => {
       const status = error.response.status;
       const message = error.response.data?.message || error.response.data?.error;
       
-      if (status === 404) {
+      if (status === 404 || (status === 401 && (message?.includes('not found') || message?.includes('does not exist')))) {
         // Check if input is email or mobile to show specific error
         const hasAt = formData.emailOrMobile.includes('@');
         const cleaned = formData.emailOrMobile.replace(/[\s\-]/g, '');
@@ -467,6 +467,20 @@ const performPasswordLogin = async () => {
           throw new Error('Account not found. Please check your credentials or sign up for a new account.');
         }
       } else if (status === 401) {
+        // Check if it's a user not found case based on message content
+        if (message?.toLowerCase().includes('user') && (message?.toLowerCase().includes('not found') || message?.toLowerCase().includes('does not exist'))) {
+          const hasAt = formData.emailOrMobile.includes('@');
+          const cleaned = formData.emailOrMobile.replace(/[\s\-]/g, '');
+          const isDigits = /^\+?\d+$/.test(cleaned);
+          
+          if (hasAt) {
+            throw new Error('Email address not found. Please check your email or sign up for a new account.');
+          } else if (isDigits) {
+            throw new Error('Mobile number not found. Please check your mobile number or sign up for a new account.');
+          } else {
+            throw new Error('Account not found. Please check your credentials or sign up for a new account.');
+          }
+        }
         throw new Error(message || 'Invalid email or password. Please try again.');
       } else if (status === 400) {
         throw new Error(message || 'Invalid request. Please check your email format.');
