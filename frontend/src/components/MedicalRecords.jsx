@@ -1703,7 +1703,8 @@ const MedicalRecords = ({ user }) => {
       }
 
       // Fetch medical records from backend API
-      const apiUrl = `${process.env.REACT_APP_API_URL}/medical-record`;
+      const baseUrl = process.env.REACT_APP_API_URL.replace(/\/$/, '');
+      const apiUrl = `${baseUrl}/medical-record`;
       console.log('Fetching from URL:', apiUrl);
 
       const response = await fetch(apiUrl, {
@@ -2192,180 +2193,12 @@ const MedicalRecords = ({ user }) => {
     }
   };
 
-  const handleView = async (record) => {
-    try {
-      setPreviewLoading(prev => ({ ...prev, [record.id]: true }));
-      
-      console.log('Viewing record:', record);
-      
-      // For testing purposes, let's try to directly open a PDF file
-      // This is a workaround to bypass the backend server issues
-      if (record.file && record.file.toLowerCase().endsWith('.pdf')) {
-        // Create a simple PDF viewer in a new window
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.write(`
-            <html>
-              <head>
-                <title>${record.title || 'PDF Viewer'}</title>
-                <style>
-                  body, html {
-                    margin: 0;
-                    padding: 0;
-                    height: 100%;
-                    overflow: hidden;
-                  }
-                  .pdf-container {
-                    width: 100%;
-                    height: 100vh;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    background-color: #f5f5f5;
-                  }
-                  .pdf-viewer {
-                    width: 100%;
-                    height: 100%;
-                    border: none;
-                  }
-                  .pdf-fallback {
-                    padding: 20px;
-                    text-align: center;
-                    max-width: 600px;
-                  }
-                  h1 {
-                    color: #333;
-                    font-family: Arial, sans-serif;
-                  }
-                  p {
-                    color: #666;
-                    font-family: Arial, sans-serif;
-                    line-height: 1.6;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="pdf-container">
-                  <object 
-                    class="pdf-viewer" 
-                    data="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" 
-                    type="application/pdf">
-                    <div class="pdf-fallback">
-                      <h1>PDF Preview</h1>
-                      <p>Your browser doesn't support embedded PDFs. You can download the file and view it in a PDF reader.</p>
-                      <p>File: ${record.title || 'Document'}</p>
-                      <p>Type: ${record.type || 'PDF'}</p>
-                      <p>Date: ${record.date || 'Unknown'}</p>
-                    </div>
-                  </object>
-                </div>
-              </body>
-            </html>
-          `);
-          newWindow.document.close();
-          
-          setNotification({
-            open: true,
-            message: 'PDF preview opened in new tab',
-            severity: 'success'
-          });
-          return;
-        }
-      }
-      
-      // If direct opening doesn't work, try the original approach
-      try {
-        const payload = {
-          blob_name: record.blob_name || `medical-record/${record.id}_${record.file}`
-        };
-        console.log('Request payload:', payload);
-        
-        // Get the backend URL from environment or default to localhost:3000
-        const backendUrl = process.env.REACT_APP_API_URL || 'https://consumer-dev-363382968588.asia-south1.run.app';
-        const apiUrl = `${backendUrl}/medical-record/preview-file`;
-        console.log('Fetching PDF from:', apiUrl);
-        
-        // Add a timeout to the fetch request
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/pdf',
-          },
-          body: JSON.stringify(payload),
-          credentials: 'include', // Include cookies for authentication if needed
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId); // Clear the timeout if the request completes
-        
-        if (!response.ok) {
-          throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
-        }
-        
-        // Get the blob from the response
-        const blob = await response.blob();
-        console.log('Received blob:', blob);
-        console.log('Blob type:', blob.type);
-        console.log('Blob size:', blob.size);
-
-        if (blob.size === 0) {
-          throw new Error('Received empty PDF data from server');
-        }
-
-        // Log first few bytes to check if it's actually a PDF
-        const arrayBuffer = await blob.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer.slice(0, 8));
-        console.log('First 8 bytes:', Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
-
-        // Check if it starts with PDF header (%PDF-)
-        const pdfHeader = new Uint8Array(arrayBuffer.slice(0, 5));
-        const headerString = String.fromCharCode(...pdfHeader);
-        console.log('PDF header check:', headerString);
-
-        if (headerString !== '%PDF-') {
-          console.warn('Response does not appear to be a valid PDF file');
-          // Try to display as text to see what we actually got
-          const textContent = await response.clone().text();
-          console.log('Response as text (first 500 chars):', textContent.substring(0, 500));
-          throw new Error('Server returned invalid PDF data. Check server logs for details.');
-        }
-
-        // Create a blob URL with explicit PDF content type
-        const pdfBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        
-        // Open the PDF directly in a new tab
-        window.open(blobUrl, '_blank');
-        
-        // Clean up the blob URL after a delay
-        setTimeout(() => {
-          URL.revokeObjectURL(blobUrl);
-        }, 30000);
-        
-        setNotification({
-          open: true,
-          message: 'PDF opened in new tab',
-          severity: 'success'
-        });
-      } catch (fetchError) {
-        console.error('Error fetching from backend:', fetchError);
-        throw new Error(`Backend server error: ${fetchError.message}. The server might not be running or the endpoint might be incorrect.`);
-      }
-    } catch (error) {
-      console.error('Error viewing file:', error);
-      setNotification({
-        open: true,
-        message: error.message || 'Failed to view PDF',
-        severity: 'error'
-      });
-    } finally {
-      setPreviewLoading(prev => ({ ...prev, [record.id]: false }));
-    }
+  const handleView = (record) => {
+    setNotification({
+      open: true,
+      message: 'PDF preview is currently not available. You can view the extracted data in the analysis section.',
+      severity: 'info'
+    });
   };
 
   const handleVerify = (record) => {
@@ -3063,23 +2896,6 @@ const MedicalRecords = ({ user }) => {
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton
-                      color="primary"
-                      onClick={() => handleView(record)}
-                      title="Preview and download record"
-                      disabled={previewLoading[record.id]}
-                      sx={{
-                        borderRadius: '8px',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        '&:hover': {
-                          backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                          transform: 'scale(1.1)',
-                        },
-                        transition: 'all 0.3s ease-in-out'
-                      }}
-                    >
-                      {previewLoading[record.id] ? <CircularProgress size={20} /> : <ViewIcon />}
-                    </IconButton>
                     <IconButton
                       color="secondary"
                       onClick={() => handleVerify(record)}

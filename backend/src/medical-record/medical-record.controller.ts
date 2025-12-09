@@ -50,15 +50,6 @@ export class MedicalRecordController {
       const fileBuffer = await this.service.getOriginalFile(body.blob_name);
       console.log('Retrieved file buffer, size:', fileBuffer.length, 'bytes');
 
-      // Check if buffer starts with PDF header
-      const header = fileBuffer.subarray(0, 5).toString();
-      console.log('File header check:', header);
-
-      if (header !== '%PDF-') {
-        console.warn('File does not appear to be a valid PDF!');
-        console.log('First 100 bytes as hex:', fileBuffer.subarray(0, 100).toString('hex'));
-      }
-
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'inline');
       res.setHeader('Cache-Control', 'no-cache');

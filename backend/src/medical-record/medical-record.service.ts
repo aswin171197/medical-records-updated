@@ -35,6 +35,17 @@ export class MedicalRecordService {
   
 
   async extractFiles(body: { patientId?: number, appointmentId?: number, id?: number }, files: MulterFile[], userInfo: IUserInfo, options = { format: true }) {
+    // Use single timestamp for consistent blob naming
+    const timestamp = Date.now();
+    
+    // Store files in memory for later retrieval
+    const storedFiles = files.map(file => {
+      const blobName = `medical-record/${timestamp}_${file.originalname}`;
+      this.fileStore.set(blobName, file.buffer);
+      console.log(`Stored file: ${blobName}`);
+      return { file, blobName };
+    });
+    
     const url = `${this.BASE_API}/extract-record`;
     const formData = new FormData();
     files.forEach(file => {
@@ -63,10 +74,30 @@ export class MedicalRecordService {
       let existingExtractionData: any;
 
       const extractedData = await this.getExtractedData(extractedText.data || extractedText, userInfo, options);
+      
+      // Add blob_name to each extracted data item using stored blob names
+      const enrichedData = extractedData.map((item, index) => {
+        const storedFile = storedFiles[index];
+        return {
+          ...item,
+          blob_name: storedFile?.blobName || `medical-record/${timestamp}_${files[index]?.originalname || 'unknown'}`
+        };
+      });
 
-
-
-      return extractedData;
+      return {
+        status: 'success',
+        data: {
+          id: timestamp,
+          extractedData: enrichedData,
+          meta: {
+            files: storedFiles.map(({ file, blobName }) => ({
+              filename: file.originalname,
+              blob_name: blobName,
+              url: blobName
+            }))
+          }
+        }
+      };
     } catch (error) {
       console.error('Medical record extraction failed:', error);
       // Fallback to local processing instead of throwing error
@@ -97,7 +128,30 @@ export class MedicalRecordService {
         }
 
         console.log(`Local processing completed for ${localResults.length} files`);
-        return localResults;
+        
+        // Add blob_name to local results using already stored files
+        const enrichedLocalResults = localResults.map((item, index) => {
+          const storedFile = storedFiles[index];
+          return {
+            ...item,
+            blob_name: storedFile?.blobName || `medical-record/${timestamp}_${files[index]?.originalname || 'unknown'}`
+          };
+        });
+        
+        return {
+          status: 'success',
+          data: {
+            id: timestamp,
+            extractedData: enrichedLocalResults,
+            meta: {
+              files: storedFiles.map(({ file, blobName }) => ({
+                filename: file.originalname,
+                blob_name: blobName,
+                url: blobName
+              }))
+            }
+          }
+        };
 
       } catch (localError) {
         console.error('Local processing also failed:', localError);
