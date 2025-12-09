@@ -395,11 +395,18 @@ const Login = ({ onLogin }) => {
   };
 
 const sendOtp = async () => {
-  const mobile = countryCode + formData.emailOrMobile.replace(/\D/g, ''); // Combine country code with mobile
-  const response = await axios.post('https://medical-records-fullapp-3.onrender.com/auth/send-otp-login', {
-    mobile: mobile
-  });
-  return response.data;
+  try {
+    const mobile = countryCode + formData.emailOrMobile.replace(/\D/g, ''); // Combine country code with mobile
+    const response = await axios.post('https://medical-records-fullapp-3.onrender.com/auth/send-otp-login', {
+      mobile: mobile
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      throw new Error('Mobile number not found. Please check your mobile number or sign up for a new account.');
+    }
+    throw error;
+  }
 };
 
 const performPasswordLogin = async () => {
@@ -447,7 +454,18 @@ const performPasswordLogin = async () => {
       const message = error.response.data?.message || error.response.data?.error;
       
       if (status === 404) {
-        throw new Error('Login endpoint not found. Please check if the backend server is running correctly.');
+        // Check if input is email or mobile to show specific error
+        const hasAt = formData.emailOrMobile.includes('@');
+        const cleaned = formData.emailOrMobile.replace(/[\s\-]/g, '');
+        const isDigits = /^\+?\d+$/.test(cleaned);
+        
+        if (hasAt) {
+          throw new Error('Email address not found. Please check your email or sign up for a new account.');
+        } else if (isDigits) {
+          throw new Error('Mobile number not found. Please check your mobile number or sign up for a new account.');
+        } else {
+          throw new Error('Account not found. Please check your credentials or sign up for a new account.');
+        }
       } else if (status === 401) {
         throw new Error(message || 'Invalid email or password. Please try again.');
       } else if (status === 400) {
