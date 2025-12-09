@@ -173,6 +173,11 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
         const approvedRecords = records.filter(record => record.isApproved);
         const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
 
+        console.log('[AiChatV3] Loading medical data:');
+        console.log('- Total records:', records.length);
+        console.log('- Approved records:', approvedRecords.length);
+        console.log('- User info:', userInfo);
+
         if (approvedRecords.length > 0) {
           const buildContextString = (records, patient) => {
             let context = "--- Approved Patient Medical Record Context ---\n\n";
@@ -192,14 +197,21 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
             if (!records || records.length === 0) return context + "No approved medical records found.";
 
             records.forEach((record, index) => {
-              context += `### FILE ${index + 1}: ${record.title || 'Untitled'}\n`;
+              context += `### FILE ${index + 1}: ${record.title || 'Untitled'} (Date: ${record.date || 'N/A'})\n`;
               const extraction = record.extractedData?.[0]?.extraction;
-              if (!extraction) return;
+              if (!extraction) {
+                context += "No structured data extracted from this file.\n\n";
+                return;
+              }
 
               if (extraction.imaging_radiology_reports?.length) {
                 context += "#### 1. Imaging & Radiology Reports:\n";
                 extraction.imaging_radiology_reports.forEach(report => {
-                  context += `- Date: ${report.result_timestamp || 'N/A'}\n  - Report: ${report.impression || report.report_text || 'No impression text'}\n`;
+                  context += `- Date: ${report.result_timestamp || 'N/A'}\n`;
+                  context += `  - Body Part: ${report.body_part || 'N/A'}\n`;
+                  context += `  - Scan Type: ${report.scan_type || 'N/A'}\n`;
+                  context += `  - Findings: ${report.findings || 'N/A'}\n`;
+                  context += `  - Impression: ${report.impression || report.report_text || 'No impression text'}\n`;
                 });
                 context += "\n";
               }
@@ -208,7 +220,8 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
                 context += "#### 2. Laboratory Investigation Results:\n";
                 extraction.investigations.forEach(investigation => {
                   const flag = investigation.flag === 'Normal' ? '' : ` (${investigation.flag})`;
-                  context += `- ${investigation.investigation_name}: ${investigation.result} ${investigation.unit}${flag} [Range: ${investigation.reference_range}]\n`;
+                  const date = investigation.result_timestamp ? ` on ${investigation.result_timestamp}` : '';
+                  context += `- ${investigation.investigation_name}${date}: ${investigation.result} ${investigation.unit}${flag} [Normal Range: ${investigation.reference_range}]\n`;
                 });
                 context += "\n";
               }
@@ -228,9 +241,16 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
           };
 
           const fullContext = buildContextString(approvedRecords, userInfo);
+          console.log('[AiChatV3] Built medical context:');
+          console.log('- Context length:', fullContext.length);
+          console.log('- Context preview:', fullContext.substring(0, 500) + '...');
+          
           if (fullContext.trim()) {
             setMedicalData(fullContext);
           }
+        } else {
+          console.log('[AiChatV3] No approved records found');
+          setMedicalData('');
         }
       } catch (error) {
         console.error('Error loading approved medical data:', error);
@@ -574,11 +594,25 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
     setMessages(prev => [...prev, userMessage]);
     // Save user message to history
     saveMessageToHistory(input, 'user', new Date());
+    const userInput = input;
     setInput('');
     setIsTyping(true);
 
     if (connectionStatus === 'session-active') {
-      sendTextPart(input, medicalData);
+      // Check if user is asking about lab values but no medical data is available
+      if (!medicalData || medicalData.trim().length === 0) {
+        const labKeywords = ['rbc', 'hemoglobin', 'glucose', 'cholesterol', 'creatinine', 'urea', 'bilirubin', 'alt', 'ast', 'ldl', 'hdl', 'triglycerides', 'hba1c', 'tsh', 'vitamin'];
+        const isLabQuery = labKeywords.some(keyword => userInput.toLowerCase().includes(keyword));
+        
+        if (isLabQuery) {
+          const contextMessage = `USER QUESTION: ${userInput}\n\nNOTE: The user is asking about lab values but no medical records are currently available in their profile. Please provide general information about the requested lab parameter, including normal ranges, what it measures, and suggest that they upload their medical records for personalized analysis.`;
+          sendTextPart(contextMessage, '');
+        } else {
+          sendTextPart(userInput, medicalData);
+        }
+      } else {
+        sendTextPart(userInput, medicalData);
+      }
     } else {
       // Fallback response
       setTimeout(() => {

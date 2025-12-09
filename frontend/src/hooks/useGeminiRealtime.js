@@ -295,10 +295,18 @@ export default function useGeminiRealtime() {
       return;
     }
     
+    console.log('[useGeminiRealtime] sendTextPart called with:');
+    console.log('- Text:', text);
+    console.log('- Medical context length:', medicalContext?.length || 0);
+    console.log('- Medical context preview:', medicalContext?.substring(0, 200) + '...');
+    
     // Include medical context directly in the message if available
     let enhancedText = text;
     if (medicalContext && medicalContext.trim()) {
-      enhancedText = `MEDICAL CONTEXT:\n${medicalContext}\n\nUSER QUESTION: ${text}\n\nPlease answer the user's question based on the medical context provided above.`;
+      enhancedText = `MEDICAL CONTEXT:\n${medicalContext}\n\nUSER QUESTION: ${text}\n\nPlease answer the user's question based on the medical context provided above. If the user is asking about specific lab values like RBC, hemoglobin, glucose, etc., look for those values in the medical context and provide specific information about their results, reference ranges, and any abnormal flags.`;
+      console.log('[useGeminiRealtime] Enhanced text length:', enhancedText.length);
+    } else {
+      console.log('[useGeminiRealtime] No medical context available, sending text as-is');
     }
     
     socketRef.current.emit('send-text', enhancedText);
