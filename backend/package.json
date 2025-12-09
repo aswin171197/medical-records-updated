@@ -6,7 +6,6 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "prebuild": "rimraf dist",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "node dist/main",
@@ -53,8 +52,7 @@
     "tesseract.js": "^6.0.1",
     "tmp": "^0.2.5",
     "typeorm": "^0.3.27",
-    "ws": "^8.18.3",
-    "rimraf": "^3.0.2"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
