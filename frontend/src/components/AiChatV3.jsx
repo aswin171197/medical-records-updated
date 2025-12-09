@@ -177,6 +177,8 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
         console.log('- Total records:', records.length);
         console.log('- Approved records:', approvedRecords.length);
         console.log('- User info:', userInfo);
+        console.log('- Raw records data:', records);
+        console.log('- Approved records data:', approvedRecords);
 
         if (approvedRecords.length > 0) {
           const buildContextString = (records, patient) => {
@@ -296,6 +298,7 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
           const fullContext = buildContextString(approvedRecords, userInfo);
           console.log('[AiChatV3] Built medical context:');
           console.log('- Context length:', fullContext.length);
+          console.log('- COMPLETE MEDICAL CONTEXT:', fullContext);
           console.log('- Context preview:', fullContext.substring(0, 500) + '...');
           
           if (fullContext.trim()) {
