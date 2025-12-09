@@ -299,7 +299,7 @@ const Profile = ({ user, onLogout }) => {
         return;
       }
 
-      const response = await fetch('https://consumer-dev-363382968588.asia-south1.run.app/auth/profile', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'https://medical-records-fullapp-3.onrender.com'}/auth/profile`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

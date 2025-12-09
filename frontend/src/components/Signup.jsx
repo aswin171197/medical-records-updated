@@ -344,7 +344,7 @@ const Signup = ({ onSignup }) => {
   };
 
   const performPasswordSignup = async () => {
-    const response = await axios.post('https://consumer-dev-363382968588.asia-south1.run.app/auth/signup', {
+    const response = await axios.post(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'https://medical-records-fullapp-3.onrender.com'}/auth/signup`, {
       name: formData.name,
       email: formData.email,
       password: formData.password,
@@ -359,7 +359,7 @@ const Signup = ({ onSignup }) => {
     setIsLoading(true);
     try {
       const mobile = countryCode + formData.mobile.replace(/\D/g, ''); // Combine country code with mobile
-      const response = await axios.post('https://consumer-dev-363382968588.asia-south1.run.app/auth/verify-otp-signup', {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'https://medical-records-fullapp-3.onrender.com'}/auth/verify-otp-signup`, {
         mobile: mobile,
         otp: otp
       });

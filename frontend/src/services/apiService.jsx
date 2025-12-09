@@ -20,7 +20,7 @@ const buildHeaders = (extra = {}) => {
 };
 
 const apiGet = async (path, options = {}) => {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const url = path.startsWith('http') ? path : `${API_BASE.replace(/\/$/, '')}${path.startsWith('/') ? path : '/' + path}`;
   const res = await fetch(url, {
     method: 'GET',
     headers: buildHeaders(options.headers || {}),
@@ -50,7 +50,7 @@ const apiGet = async (path, options = {}) => {
 };
 
 const apiPost = async (path, body = {}, options = {}) => {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const url = path.startsWith('http') ? path : `${API_BASE.replace(/\/$/, '')}${path.startsWith('/') ? path : '/' + path}`;
   const isFormData = body instanceof FormData;
   const res = await fetch(url, {
     method: 'POST',
@@ -81,7 +81,7 @@ const apiPost = async (path, body = {}, options = {}) => {
 };
 
 const apiDelete = async (path, options = {}) => {
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const url = path.startsWith('http') ? path : `${API_BASE.replace(/\/$/, '')}${path.startsWith('/') ? path : '/' + path}`;
   const res = await fetch(url, {
     method: 'DELETE',
     headers: buildHeaders(options.headers || {}),
@@ -1100,7 +1100,7 @@ const uploadMedicalRecords = async (files, userInfo, body = {}) => {
     console.log('Final backendUrl:', backendUrl);
     console.log('Full endpoint URL:', `${backendUrl}/medical-record/extract-files`);
 
-    const response = await fetch(`${backendUrl}/medical-record/extract-files`, {
+    const response = await fetch(`${backendUrl.replace(/\/$/, '')}/medical-record/extract-files`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`

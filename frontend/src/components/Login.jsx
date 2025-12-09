@@ -267,7 +267,7 @@ const Login = ({ onLogin }) => {
   useEffect(() => {
     const checkBackendStatus = async () => {
       try {
-        const response = await axios.get('https://medical-records-fullapp-3.onrender.com/auth/test-token', {
+        const response = await axios.get(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'https://medical-records-fullapp-3.onrender.com'}/auth/test-token`, {
           timeout: 3000
         });
         setBackendStatus('online');
@@ -384,7 +384,7 @@ const Login = ({ onLogin }) => {
 const sendOtp = async () => {
   try {
     const mobile = countryCode + formData.emailOrMobile.replace(/\D/g, ''); // Combine country code with mobile
-    const response = await axios.post('https://medical-records-fullapp-3.onrender.com/auth/send-otp-login', {
+    const response = await axios.post(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'https://medical-records-fullapp-3.onrender.com'}/auth/send-otp-login`, {
       mobile: mobile
     });
     return response.data;
@@ -406,7 +406,7 @@ const performPasswordLogin = async () => {
       password: formData.password
     };
 
-    const response = await axios.post('https://medical-records-fullapp-3.onrender.com/auth/login', loginData);
+    const response = await axios.post(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'https://medical-records-fullapp-3.onrender.com'}/auth/login`, loginData);
     console.log(response);
     // Backend returns { message, access_token, user }
     const { user, access_token } = response.data;
@@ -420,7 +420,7 @@ const performPasswordLogin = async () => {
     
     // Handle different error types
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-      throw new Error('Cannot connect to server. Please ensure the backend is running on https://medical-records-fullapp-3.onrender.com/');
+      throw new Error(`Cannot connect to server. Please ensure the backend is running on ${process.env.REACT_APP_API_URL || 'https://medical-records-fullapp-3.onrender.com'}/`);
     } else if (error.response) {
       // Server responded with error
       const status = error.response.status;
@@ -449,7 +449,7 @@ const handleOtpVerify = async (otp) => {
   setIsLoading(true);
   try {
     const mobile = countryCode + formData.emailOrMobile.replace(/\D/g, ''); // Combine country code with mobile
-    const response = await axios.post('https://medical-records-fullapp-3.onrender.com/auth/verify-otp-login', {
+    const response = await axios.post(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'https://medical-records-fullapp-3.onrender.com'}/auth/verify-otp-login`, {
       mobile: mobile,
       otp: otp
     });
