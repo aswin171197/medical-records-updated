@@ -53,7 +53,7 @@ export class V3AiService {
     type: 'bot' | 'apt',
     opts?: any,
   ): Promise<Session> {
-    const model = process.env.GEMINI_MODEL || 'models/gemini-2.0-flash-exp';
+    const model = process.env.GEMINI_MODEL || 'models/gemini-1.5-flash';
 
     const config = this.getAIConfig(opts?.medicalData);
 
