@@ -171,6 +171,11 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
       try {
         const records = JSON.parse(localStorage.getItem('medicalRecords') || '[]');
         const approvedRecords = records.filter(record => record.isApproved);
+        console.log('=== HEALTH ASSISTANT DEBUG ===');
+        console.log('Total records:', records.length);
+        console.log('Approved records:', approvedRecords.length);
+        console.log('Records:', records);
+        console.log('Approved records:', approvedRecords);
         const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
 
         if (approvedRecords.length > 0) {
@@ -205,12 +210,16 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
               }
 
               if (extraction.investigations?.length) {
+                console.log('Found investigations:', extraction.investigations.length);
+                console.log('Investigations:', extraction.investigations);
                 context += "#### 2. Laboratory Investigation Results:\n";
                 extraction.investigations.forEach(investigation => {
                   const flag = investigation.flag === 'Normal' ? '' : ` (${investigation.flag})`;
                   context += `- ${investigation.investigation_name}: ${investigation.result} ${investigation.unit}${flag} [Range: ${investigation.reference_range}]\n`;
                 });
                 context += "\n";
+              } else {
+                console.log('No investigations found in extraction:', extraction);
               }
 
               if (extraction.other_clinical_data) {
@@ -228,6 +237,24 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
           };
 
           const fullContext = buildContextString(approvedRecords, userInfo);
+          
+          // Count total investigations across all approved records
+          let totalInvestigations = 0;
+          let totalImagingReports = 0;
+          approvedRecords.forEach(record => {
+            const extraction = record.extractedData?.[0]?.extraction;
+            if (extraction) {
+              totalInvestigations += extraction.investigations?.length || 0;
+              totalImagingReports += extraction.imaging_radiology_reports?.length || 0;
+            }
+          });
+          
+          console.log('=== FINAL CONTEXT ===');
+          console.log('Context length:', fullContext.length);
+          console.log('Total investigations found:', totalInvestigations);
+          console.log('Total imaging reports found:', totalImagingReports);
+          console.log('Context preview:', fullContext.substring(0, 500));
+          
           if (fullContext.trim()) {
             setMedicalData(fullContext);
           }

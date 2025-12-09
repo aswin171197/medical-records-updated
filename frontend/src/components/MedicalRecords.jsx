@@ -1985,30 +1985,7 @@ const MedicalRecords = ({ user }) => {
           localStorage.setItem('recentRecords', JSON.stringify(newRecentRecords));
         }
 
-        // Also update the record in the backend database
-        try {
-          const response = await fetch(`https://medical-records-updates2.onrender.com/medical-record/${currentAnalysisRecord.id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-              extractedData: updatedRecord.extractedData[0].extraction,
-              investigations: investigations,
-              imagingReports: imagingReports,
-              otherClinicalData: otherClinicalData
-            })
-          });
 
-          if (!response.ok) {
-            console.error('Failed to update record in backend:', response.status);
-          } else {
-            console.log('Record updated in backend database');
-          }
-        } catch (error) {
-          console.error('Failed to update record in backend:', error);
-        }
       }
 
       setNotification({
