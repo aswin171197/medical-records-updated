@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import audioService from '../services/gemini/GeminiRealtimeAudioService.js'; // <-- adjust path if needed
 
 // Replace with your backend socket URL
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3000///';
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'https://medical-records-updates2.onrender.com/';
 
 const DEFAULT_STATUS = 'disconnected';
 

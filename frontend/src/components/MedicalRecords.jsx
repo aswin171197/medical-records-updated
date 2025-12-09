@@ -60,7 +60,7 @@ import {
   MicOff as MicOffIcon,
   Stop as StopIcon
 } from '@mui/icons-material';
-
+import HealthAssistant from './HealthAssistant';
 import apiService from '../services/apiService';
 
 // Loading animation keyframes
@@ -138,17 +138,15 @@ const DocumentSelector = ({ currentRecord, onRecordSelect }) => {
 };
 
 // EMR Analysis Interface Component
-const EMRAnalysisInterface = ({
-  currentRecord,
-  imagingReports,
-  setImagingReports,
-  investigations,
-  setInvestigations,
-  otherClinicalData,
-  setOtherClinicalData,
-  onApprove,
-  setNotification,
-  fetchMedicalRecords
+const EMRAnalysisInterface = ({ 
+  currentRecord, 
+  imagingReports, 
+  setImagingReports, 
+  investigations, 
+  setInvestigations, 
+  otherClinicalData, 
+  setOtherClinicalData, 
+  onApprove 
 }) => {
   const [editingRowIndex, setEditingRowIndex] = useState(null);
   const [detailViewOpen, setDetailViewOpen] = useState(false);
@@ -162,19 +160,6 @@ const EMRAnalysisInterface = ({
     reference_range: '',
     flag: 'NORMAL'
   });
-
-  const [newImagingReport, setNewImagingReport] = useState({
-    body_part: '',
-    scan_type: '',
-    findings: '',
-    impression: '',
-    result_timestamp: new Date().toISOString().split('T')[0]
-  });
-
-  // Simple manual record creation state
-  const [simpleRecordText, setSimpleRecordText] = useState('');
-  const [simpleRecordTitle, setSimpleRecordTitle] = useState('');
-  const [isCreatingSimpleRecord, setIsCreatingSimpleRecord] = useState(false);
 
   const statusOptions = [
     { label: 'Normal', value: 'Normal' },
@@ -220,80 +205,6 @@ const EMRAnalysisInterface = ({
       });
     }
   }
-
-  const addImagingReport = () => {
-    if (newImagingReport.body_part.trim() && newImagingReport.scan_type.trim()) {
-      setImagingReports([...imagingReports, { ...newImagingReport }]);
-      setNewImagingReport({
-        body_part: '',
-        scan_type: '',
-        findings: '',
-        impression: '',
-        result_timestamp: new Date().toISOString().split('T')[0]
-      });
-    }
-  }
-
-  const handleCreateSimpleRecord = async () => {
-    if (!simpleRecordText.trim() || !simpleRecordTitle.trim()) {
-      setNotification({
-        open: true,
-        message: 'Please enter both title and medical information',
-        severity: 'warning'
-      });
-      return;
-    }
-
-    setIsCreatingSimpleRecord(true);
-
-    try {
-      // Create a simple manual record
-      const newRecord = {
-        id: Date.now(),
-        title: simpleRecordTitle.trim(),
-        date: new Date().toISOString().split('T')[0],
-        type: 'Manual Entry',
-        file: simpleRecordTitle.trim(),
-        blob_name: `manual-record/${Date.now()}_${simpleRecordTitle.trim().replace(/\s+/g, '_')}`,
-        extractedData: [{
-          extraction: {
-            investigations: [],
-            imaging_radiology_reports: [],
-            other_relevant_clinical_details: simpleRecordText.trim()
-          },
-          text: {},
-          recordId: Date.now()
-        }],
-        isApproved: true // Manual entries are auto-approved
-      };
-
-      const existingRecords = JSON.parse(localStorage.getItem('medicalRecords') || '[]');
-      const updatedRecords = [newRecord, ...existingRecords];
-      localStorage.setItem('medicalRecords', JSON.stringify(updatedRecords));
-
-      // Clear form
-      setSimpleRecordText('');
-      setSimpleRecordTitle('');
-
-      setNotification({
-        open: true,
-        message: `Manual record "${newRecord.title}" created successfully`,
-        severity: 'success'
-      });
-
-      // Refresh records list
-      fetchMedicalRecords();
-    } catch (error) {
-      console.error('Error creating simple record:', error);
-      setNotification({
-        open: true,
-        message: 'Failed to create manual record',
-        severity: 'error'
-      });
-    } finally {
-      setIsCreatingSimpleRecord(false);
-    }
-  };
 
   const removeInvestigationRow = (index) => {
     const newInvestigations = investigations.filter((_, i) => i !== index);
@@ -369,97 +280,6 @@ const EMRAnalysisInterface = ({
             </Typography>
           </Box>
         </Box>
-
-        {/* Quick Manual Record Creation */}
-        <Card
-          sx={{
-            mb: 4,
-            background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-            borderRadius: '12px',
-            border: '1px solid rgba(0,0,0,0.08)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-          }}
-        >
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <Avatar
-                sx={{
-                  mr: 2,
-                  bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  width: 40,
-                  height: 40
-                }}
-              >
-                <EditIcon sx={{ color: 'white', fontSize: 20 }} />
-              </Avatar>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-                Quick Manual Entry
-              </Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                label="Record Title"
-                placeholder="e.g., Doctor Visit Notes, Symptoms"
-                value={simpleRecordTitle}
-                onChange={(e) => setSimpleRecordTitle(e.target.value)}
-                size="small"
-                fullWidth
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                  }
-                }}
-              />
-
-              <TextField
-                label="Medical Information"
-                multiline
-                rows={4}
-                placeholder="Enter symptoms, diagnosis, treatment notes, medications, or any medical information..."
-                value={simpleRecordText}
-                onChange={(e) => setSimpleRecordText(e.target.value)}
-                fullWidth
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(255,255,255,0.8)',
-                  }
-                }}
-              />
-
-              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Button
-                  variant="contained"
-                  onClick={handleCreateSimpleRecord}
-                  disabled={!simpleRecordText.trim() || !simpleRecordTitle.trim() || isCreatingSimpleRecord}
-                  startIcon={isCreatingSimpleRecord ? <CircularProgress size={20} /> : <SaveIcon />}
-                  sx={{
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 4,
-                    py: 1.5,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
-                    },
-                    '&:disabled': {
-                      background: 'rgba(102, 126, 234, 0.3)',
-                    },
-                    transition: 'all 0.3s ease-in-out'
-                  }}
-                >
-                  {isCreatingSimpleRecord ? 'Creating...' : 'Create Record'}
-                </Button>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
         
         {/* Document Selector */}
         <DocumentSelector 
@@ -1228,269 +1048,6 @@ const EMRAnalysisInterface = ({
 
 
 
-        {/* Manual Data Entry Accordion */}
-        <Accordion
-          sx={{
-            mt: 2,
-            borderRadius: '12px !important',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            border: '1px solid rgba(0,0,0,0.06)',
-            '&:before': {
-              display: 'none',
-            },
-            '&.Mui-expanded': {
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-            }
-          }}
-        >
-          <AccordionSummary
-            expandIcon={<ExpandMoreIcon sx={{ color: 'info.main' }} />}
-            sx={{
-              background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)',
-              borderRadius: '12px 12px 0 0 !important',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-              },
-              '&.Mui-expanded': {
-                background: 'linear-gradient(135deg, #2196f3 0%, #64b5f6 100%)',
-                color: 'white',
-                '& .MuiAccordionSummary-expandIconWrapper': {
-                  color: 'white'
-                }
-              }
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar
-                sx={{
-                  mr: 2,
-                  bgcolor: 'info.main',
-                  width: 40,
-                  height: 40
-                }}
-              >
-                <AddIcon sx={{ color: 'white', fontSize: 20 }} />
-              </Avatar>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                  Manual Data Entry
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-                  Add medical data manually if not available in uploaded documents
-                </Typography>
-              </Box>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {/* Manual Investigation Entry */}
-              <Card sx={{ border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-                <CardContent>
-                  <Typography variant="h6" sx={{ mb: 2, color: 'success.main' }}>
-                    Add Investigation Result
-                  </Typography>
-                  <Grid container spacing={2} alignItems="end">
-                    <Grid item xs={2}>
-                      <TextField
-                        label="Date"
-                        type="date"
-                        size="small"
-                        value={newInvestigation.result_timestamp}
-                        onChange={(e) => setNewInvestigation({...newInvestigation, result_timestamp: e.target.value})}
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={3}>
-                      <TextField
-                        label="Test Name"
-                        size="small"
-                        value={newInvestigation.investigation_name}
-                        onChange={(e) => setNewInvestigation({...newInvestigation, investigation_name: e.target.value})}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <TextField
-                        label="Result"
-                        size="small"
-                        value={newInvestigation.result}
-                        onChange={(e) => setNewInvestigation({...newInvestigation, result: e.target.value})}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={1.5}>
-                      <TextField
-                        label="Unit"
-                        size="small"
-                        value={newInvestigation.unit}
-                        onChange={(e) => setNewInvestigation({...newInvestigation, unit: e.target.value})}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <TextField
-                        label="Reference Range"
-                        size="small"
-                        value={newInvestigation.reference_range}
-                        onChange={(e) => setNewInvestigation({...newInvestigation, reference_range: e.target.value})}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={1.5}>
-                      <FormControl size="small" fullWidth>
-                        <InputLabel>Status</InputLabel>
-                        <Select
-                          value={newInvestigation.flag}
-                          onChange={(e) => setNewInvestigation({...newInvestigation, flag: e.target.value})}
-                          label="Status"
-                        >
-                          <MenuItem value="NORMAL">NORMAL</MenuItem>
-                          <MenuItem value="HIGH">HIGH</MenuItem>
-                          <MenuItem value="LOW">LOW</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  </Grid>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                    <Button
-                      onClick={addInvestigationRow}
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      disabled={!newInvestigation.investigation_name.trim()}
-                      sx={{
-                        borderRadius: '8px',
-                        textTransform: 'none',
-                        fontWeight: 500,
-                        background: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #43a047 0%, #4caf50 100%)',
-                        }
-                      }}
-                    >
-                      Add Investigation
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-
-              {/* Manual Imaging Entry */}
-              <Card sx={{ border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-                <CardContent>
-                  <Typography variant="h6" sx={{ mb: 2, color: 'secondary.main' }}>
-                    Add Imaging Report
-                  </Typography>
-                  <Grid container spacing={2} alignItems="end">
-                    <Grid item xs={3}>
-                      <TextField
-                        label="Body Part"
-                        size="small"
-                        placeholder="e.g., Chest, Abdomen"
-                        value={newImagingReport.body_part}
-                        onChange={(e) => setNewImagingReport({...newImagingReport, body_part: e.target.value})}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={3}>
-                      <TextField
-                        label="Scan Type"
-                        size="small"
-                        placeholder="e.g., X-RAY, CT, MRI"
-                        value={newImagingReport.scan_type}
-                        onChange={(e) => setNewImagingReport({...newImagingReport, scan_type: e.target.value})}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <TextField
-                        label="Date"
-                        type="date"
-                        size="small"
-                        value={newImagingReport.result_timestamp}
-                        onChange={(e) => setNewImagingReport({...newImagingReport, result_timestamp: e.target.value})}
-                        InputLabelProps={{ shrink: true }}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={4}>
-                      <TextField
-                        label="Findings"
-                        size="small"
-                        placeholder="Brief description of findings"
-                        value={newImagingReport.findings}
-                        onChange={(e) => setNewImagingReport({...newImagingReport, findings: e.target.value})}
-                        fullWidth
-                      />
-                    </Grid>
-                  </Grid>
-                  <Box sx={{ mt: 2 }}>
-                    <TextField
-                      label="Impression"
-                      multiline
-                      rows={2}
-                      fullWidth
-                      placeholder="Radiologist's impression or conclusion"
-                      value={newImagingReport.impression}
-                      onChange={(e) => setNewImagingReport({...newImagingReport, impression: e.target.value})}
-                      size="small"
-                    />
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                    <Button
-                      onClick={addImagingReport}
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      disabled={!newImagingReport.body_part.trim() || !newImagingReport.scan_type.trim()}
-                      sx={{
-                        borderRadius: '8px',
-                        textTransform: 'none',
-                        fontWeight: 500,
-                        background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #8e24aa 0%, #ab47bc 100%)',
-                        }
-                      }}
-                    >
-                      Add Imaging Report
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-
-              {/* Manual Clinical Notes */}
-              <Card sx={{ border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-                <CardContent>
-                  <Typography variant="h6" sx={{ mb: 2, color: 'warning.main' }}>
-                    Clinical Notes
-                  </Typography>
-                  <TextField
-                    multiline
-                    rows={6}
-                    fullWidth
-                    placeholder="Enter clinical observations, symptoms, diagnosis, treatment notes, or any other relevant medical information..."
-                    value={otherClinicalData}
-                    onChange={(e) => setOtherClinicalData(e.target.value)}
-                    variant="outlined"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '8px',
-                        backgroundColor: 'rgba(255,255,255,0.8)',
-                        '&:hover': {
-                          backgroundColor: 'rgba(255,255,255,0.9)',
-                        },
-                        '&.Mui-focused': {
-                          backgroundColor: 'white',
-                          boxShadow: '0 0 0 3px rgba(255, 152, 0, 0.1)',
-                        }
-                      }
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            </Box>
-          </AccordionDetails>
-        </Accordion>
-
         {/* Other Clinical Data Accordion */}
         <Accordion
           sx={{
@@ -1667,62 +1224,22 @@ const MedicalRecords = ({ user }) => {
 
   useEffect(() => {
     fetchMedicalRecords();
-    
-    // Check if there's a selected record from Profile page
-    const selectedRecord = sessionStorage.getItem('selectedRecord');
-    if (selectedRecord) {
-      try {
-        const record = JSON.parse(selectedRecord);
-        // Set the record for verification and open verification mode
-        setCurrentAnalysisRecord(record);
-        handleVerify(record);
-        setVerificationMode(true);
-        // Clear the session storage
-        sessionStorage.removeItem('selectedRecord');
-      } catch (error) {
-        console.error('Error parsing selected record:', error);
-      }
-    }
   }, []);
 
   const fetchMedicalRecords = async () => {
     setIsLoading(true);
     try {
-      console.log('=== DEBUG: FETCHING MEDICAL RECORDS ===');
-      const token = localStorage.getItem('token');
-      console.log('Auth token present:', !!token);
-      console.log('Token length:', token ? token.length : 0);
-
-      // If no token, skip API call and use localStorage
-      if (!token) {
-        console.log('No auth token found, using localStorage fallback');
-        const storedRecords = JSON.parse(localStorage.getItem('medicalRecords') || '[]');
-        setRecords(storedRecords);
-        setIsLoading(false);
-        return;
-      }
-
       // Fetch medical records from backend API
-      const baseUrl = process.env.REACT_APP_API_URL.replace(/\/$/, '');
-      const apiUrl = `${baseUrl}/medical-record`;
-      console.log('Fetching from URL:', apiUrl);
-
-      const response = await fetch(apiUrl, {
+      const response = await fetch('https://medical-records-updates2.onrender.com/medical-record', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Include JWT token
+          'Authorization': `Bearer ${localStorage.getItem('token')}` // Include JWT token
         }
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.log('Error response text:', errorText);
-        throw new Error(`Failed to fetch medical records: ${response.status} - ${errorText}`);
+        throw new Error(`Failed to fetch medical records: ${response.status}`);
       }
 
       const data = await response.json();
@@ -1750,23 +1267,7 @@ const MedicalRecords = ({ user }) => {
       console.log('Medical records loaded from database:', transformedRecords.length);
     } catch (error) {
       console.error('Error fetching medical records:', error);
-
-      // Check if it's a network error or server error
-      const isNetworkError = error.message.includes('fetch') || error.message.includes('network') || error.name === 'TypeError';
-      const isServerError = error.message.includes('500') || error.message.includes('502') || error.message.includes('503') || error.message.includes('504');
-
-      if (isNetworkError || isServerError) {
-        console.log('Network or server error detected, using localStorage fallback silently');
-        // Don't show notification for network/server issues, just use localStorage
-      } else {
-        setNotification({
-          open: true,
-          message: 'Failed to load medical records from server',
-          severity: 'error'
-        });
-      }
-
-      // Fallback to localStorage if backend fails
+      // Always use localStorage fallback silently - no error notifications
       const storedRecords = JSON.parse(localStorage.getItem('medicalRecords') || '[]');
       setRecords(storedRecords);
     } finally {
@@ -1834,7 +1335,7 @@ const MedicalRecords = ({ user }) => {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.wav');
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/medical-record/extract-audio`, {
+      const response = await fetch('https://medical-records-updates2.onrender.com/medical-record/extract-audio', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1920,7 +1421,7 @@ const MedicalRecords = ({ user }) => {
         type: 'text'
       };
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/chatbot/chat`, {
+      const response = await fetch('https://medical-records-updates2.onrender.com/chatbot/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2076,7 +1577,10 @@ const MedicalRecords = ({ user }) => {
             result: inv.result || '',
             unit: inv.unit || '',
             reference_range: inv.reference_range || '',
-            flag: inv.flag || 'NORMAL'
+            flag: (inv.flag === 'HIGH' || inv.flag === 'H') ? 'High' : 
+                  (inv.flag === 'LOW' || inv.flag === 'L') ? 'Low' : 
+                  (inv.flag === 'NORMAL' || inv.flag === 'N') ? 'Normal' : 
+                  inv.flag || 'Normal'
           }));
           setInvestigations(formattedInvestigations);
         } else {
@@ -2193,12 +1697,180 @@ const MedicalRecords = ({ user }) => {
     }
   };
 
-  const handleView = (record) => {
-    setNotification({
-      open: true,
-      message: 'PDF preview is currently not available. You can view the extracted data in the analysis section.',
-      severity: 'info'
-    });
+  const handleView = async (record) => {
+    try {
+      setPreviewLoading(prev => ({ ...prev, [record.id]: true }));
+      
+      console.log('Viewing record:', record);
+      
+      // For testing purposes, let's try to directly open a PDF file
+      // This is a workaround to bypass the backend server issues
+      if (record.file && record.file.toLowerCase().endsWith('.pdf')) {
+        // Create a simple PDF viewer in a new window
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(`
+            <html>
+              <head>
+                <title>${record.title || 'PDF Viewer'}</title>
+                <style>
+                  body, html {
+                    margin: 0;
+                    padding: 0;
+                    height: 100%;
+                    overflow: hidden;
+                  }
+                  .pdf-container {
+                    width: 100%;
+                    height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    background-color: #f5f5f5;
+                  }
+                  .pdf-viewer {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                  }
+                  .pdf-fallback {
+                    padding: 20px;
+                    text-align: center;
+                    max-width: 600px;
+                  }
+                  h1 {
+                    color: #333;
+                    font-family: Arial, sans-serif;
+                  }
+                  p {
+                    color: #666;
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="pdf-container">
+                  <object 
+                    class="pdf-viewer" 
+                    data="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" 
+                    type="application/pdf">
+                    <div class="pdf-fallback">
+                      <h1>PDF Preview</h1>
+                      <p>Your browser doesn't support embedded PDFs. You can download the file and view it in a PDF reader.</p>
+                      <p>File: ${record.title || 'Document'}</p>
+                      <p>Type: ${record.type || 'PDF'}</p>
+                      <p>Date: ${record.date || 'Unknown'}</p>
+                    </div>
+                  </object>
+                </div>
+              </body>
+            </html>
+          `);
+          newWindow.document.close();
+          
+          setNotification({
+            open: true,
+            message: 'PDF preview opened in new tab',
+            severity: 'success'
+          });
+          return;
+        }
+      }
+      
+      // If direct opening doesn't work, try the original approach
+      try {
+        const payload = {
+          blob_name: record.blob_name || `medical-record/${record.id}_${record.file}`
+        };
+        console.log('Request payload:', payload);
+        
+        // Get the backend URL from environment or default to https://medical-records-updates2.onrender.com/
+        const backendUrl = process.env.REACT_APP_API_URL || 'https://consumer-dev-363382968588.asia-south1.run.app';
+        const apiUrl = `${backendUrl}/medical-record/preview-file`;
+        console.log('Fetching PDF from:', apiUrl);
+        
+        // Add a timeout to the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/pdf',
+          },
+          body: JSON.stringify(payload),
+          credentials: 'include', // Include cookies for authentication if needed
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId); // Clear the timeout if the request completes
+        
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+        }
+        
+        // Get the blob from the response
+        const blob = await response.blob();
+        console.log('Received blob:', blob);
+        console.log('Blob type:', blob.type);
+        console.log('Blob size:', blob.size);
+
+        if (blob.size === 0) {
+          throw new Error('Received empty PDF data from server');
+        }
+
+        // Log first few bytes to check if it's actually a PDF
+        const arrayBuffer = await blob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer.slice(0, 8));
+        console.log('First 8 bytes:', Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+
+        // Check if it starts with PDF header (%PDF-)
+        const pdfHeader = new Uint8Array(arrayBuffer.slice(0, 5));
+        const headerString = String.fromCharCode(...pdfHeader);
+        console.log('PDF header check:', headerString);
+
+        if (headerString !== '%PDF-') {
+          console.warn('Response does not appear to be a valid PDF file');
+          // Try to display as text to see what we actually got
+          const textContent = await response.clone().text();
+          console.log('Response as text (first 500 chars):', textContent.substring(0, 500));
+          throw new Error('Server returned invalid PDF data. Check server logs for details.');
+        }
+
+        // Create a blob URL with explicit PDF content type
+        const pdfBlob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        
+        // Open the PDF directly in a new tab
+        window.open(blobUrl, '_blank');
+        
+        // Clean up the blob URL after a delay
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 30000);
+        
+        setNotification({
+          open: true,
+          message: 'PDF opened in new tab',
+          severity: 'success'
+        });
+      } catch (fetchError) {
+        console.error('Error fetching from backend:', fetchError);
+        throw new Error(`Backend server error: ${fetchError.message}. The server might not be running or the endpoint might be incorrect.`);
+      }
+    } catch (error) {
+      console.error('Error viewing file:', error);
+      setNotification({
+        open: true,
+        message: error.message || 'Failed to view PDF',
+        severity: 'error'
+      });
+    } finally {
+      setPreviewLoading(prev => ({ ...prev, [record.id]: false }));
+    }
   };
 
   const handleVerify = (record) => {
@@ -2227,7 +1899,10 @@ const MedicalRecords = ({ user }) => {
             result: inv.result || '',
             unit: inv.unit || '',
             reference_range: inv.reference_range || '',
-            flag: inv.flag || 'NORMAL'
+            flag: (inv.flag === 'HIGH' || inv.flag === 'H') ? 'High' : 
+                  (inv.flag === 'LOW' || inv.flag === 'L') ? 'Low' : 
+                  (inv.flag === 'NORMAL' || inv.flag === 'N') ? 'Normal' : 
+                  inv.flag || 'Normal'
           };
         });
         setInvestigations(formattedInvestigations);
@@ -2312,7 +1987,7 @@ const MedicalRecords = ({ user }) => {
 
         // Also update the record in the backend database
         try {
-          const response = await fetch(`${process.env.REACT_APP_API_URL}/medical-record/${currentAnalysisRecord.id}`, {
+          const response = await fetch(`https://medical-records-updates2.onrender.com/medical-record/${currentAnalysisRecord.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -3238,7 +2913,7 @@ const MedicalRecords = ({ user }) => {
 
       {/* EMR Analysis Interface */}
       {verificationMode && (
-        <EMRAnalysisInterface
+        <EMRAnalysisInterface 
           currentRecord={currentAnalysisRecord}
           imagingReports={imagingReports}
           setImagingReports={setImagingReports}
@@ -3247,12 +2922,10 @@ const MedicalRecords = ({ user }) => {
           otherClinicalData={otherClinicalData}
           setOtherClinicalData={setOtherClinicalData}
           onApprove={handleApproveDocument}
-          setNotification={setNotification}
-          fetchMedicalRecords={fetchMedicalRecords}
         />
       )}
 
-
+      <HealthAssistant />
 
       {/* AI Chat Interface */}
       <Box

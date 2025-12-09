@@ -2,13 +2,13 @@
 import * as pdfjsLib from 'pdfjs-dist';
 // removed dependency on ./httpService to avoid missing .get/.post issues
 
-// Set up PDF.js worker (fallback to CDN)
-pdfjsLib.GlobalWorkerOptions.workerSrc = process.env.REACT_APP_PDF_WORKER || '//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// Set up PDF.js worker (use matching version)
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
 /* -------------------------
    Small fetch-based HTTP helpers
    ------------------------- */
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000//';
+const API_BASE = process.env.REACT_APP_API_URL || 'https://medical-records-updates2.onrender.com/';
 
 const buildHeaders = (extra = {}) => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -131,12 +131,36 @@ const extractTextFromPdfUrl = async (pdfUrl) => {
       credentials: 'omit'
     });
     
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
+      const errorText = await response.text();
+      console.log('Error response body:', errorText.substring(0, 500));
       throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+    }
+    
+    // Check if response is actually a PDF
+    const contentType = response.headers.get('content-type');
+    console.log('Content-Type:', contentType);
+    
+    if (!contentType || !contentType.includes('application/pdf')) {
+      const responseText = await response.text();
+      console.log('Non-PDF response received:', responseText.substring(0, 500));
+      throw new Error(`Expected PDF but received: ${contentType}. Response: ${responseText.substring(0, 200)}`);
     }
     
     const arrayBuffer = await response.arrayBuffer();
     console.log('PDF downloaded, size:', arrayBuffer.byteLength, 'bytes');
+    
+    // Validate PDF header
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const pdfHeader = String.fromCharCode(...uint8Array.slice(0, 4));
+    console.log('PDF header:', pdfHeader);
+    
+    if (pdfHeader !== '%PDF') {
+      throw new Error(`Invalid PDF file - header is '${pdfHeader}' instead of '%PDF'`);
+    }
     
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     
@@ -156,6 +180,11 @@ const extractTextFromPdfUrl = async (pdfUrl) => {
     return textByPage;
   } catch (error) {
     console.error('Error extracting text from PDF URL:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -1094,7 +1123,7 @@ const uploadMedicalRecords = async (files, userInfo, body = {}) => {
       extractFormData.append('files', file);
     });
 
-    const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000//';
+    const backendUrl = process.env.REACT_APP_API_URL || 'https://medical-records-updates2.onrender.com/';
     console.log('=== API SERVICE BACKEND URL DEBUG ===');
     console.log('process.env.REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
     console.log('Final backendUrl:', backendUrl);
@@ -1157,43 +1186,26 @@ const uploadMedicalRecords = async (files, userInfo, body = {}) => {
           recordId: responseId
         }];
       } else {
-        // Backend stored file but didn't extract structured data -> extract text client-side and transform
-        const pdfUrl = responseMeta?.files?.[0]?.url;
-
-        if (pdfUrl) {
-          try {
-            const textByPage = await extractTextFromPdfUrl(pdfUrl);
-            const rawDataForTransform = {
-              name: responseMeta?.files?.[0]?.filename || files[0].name,
-              text: textByPage
-            };
-
-            const transformed = transformToStructuredData(rawDataForTransform);
-
-            extractedData = [{
-              fileName: responseMeta?.files?.[0]?.filename || files[0].name,
-              blob_name: responseMeta?.files?.[0]?.blob_name || `medical-record/${Date.now()}_${files[0].name}`,
-              extraction: transformed.extraction,
-              text: textByPage,
-              recordId: responseId,
-              fileUrl: pdfUrl
-            }];
-          } catch (pdfError) {
-            console.error('Failed to extract text from PDF:', pdfError);
-            extractedData = [{
-              fileName: responseMeta?.files?.[0]?.filename || files[0].name,
-              blob_name: responseMeta?.files?.[0]?.blob_name || `medical-record/${Date.now()}_${files[0].name}`,
-              extraction: {
-                investigations: [],
-                imaging_radiology_reports: [],
-                other_relevant_clinical_details: ''
-              },
-              text: {},
-              recordId: responseId,
-              fileUrl: pdfUrl,
-              error: pdfError.message
-            }];
-          }
+        // Backend stored file but didn't extract structured data -> use backend data if available
+        console.log('Backend response data:', rawData.data);
+        
+        if (rawData.data.extractedData && rawData.data.extractedData.length > 0) {
+          // Use backend extracted data directly
+          const backendExtraction = rawData.data.extractedData[0];
+          console.log('Using backend extracted data:', backendExtraction);
+          
+          extractedData = [{
+            fileName: backendExtraction.fileName || files[0].name,
+            blob_name: responseMeta?.files?.[0]?.blob_name || `medical-record/${Date.now()}_${files[0].name}`,
+            extraction: backendExtraction.extraction || {
+              investigations: [],
+              imaging_radiology_reports: [],
+              other_relevant_clinical_details: 'No structured data extracted'
+            },
+            text: {},
+            recordId: responseId,
+            fileUrl: responseMeta?.files?.[0]?.url
+          }];
         } else {
           extractedData = [{
             fileName: responseMeta?.files?.[0]?.filename || files[0].name,
@@ -1201,11 +1213,10 @@ const uploadMedicalRecords = async (files, userInfo, body = {}) => {
             extraction: {
               investigations: [],
               imaging_radiology_reports: [],
-              other_relevant_clinical_details: ''
+              other_relevant_clinical_details: 'File uploaded successfully. You can manually enter medical data using the forms below.'
             },
             text: {},
-            recordId: responseId,
-            error: 'No PDF URL provided'
+            recordId: responseId
           }];
         }
       }

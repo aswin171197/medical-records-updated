@@ -1,14 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ChatHistory } from '../entities/chat-history.entity';
 
 @Injectable()
 export class ChatHistoryService {
+  private readonly ai: GoogleGenerativeAI;
+
   constructor(
     @InjectRepository(ChatHistory)
     private chatHistoryRepository: Repository<ChatHistory>,
-  ) {}
+  ) {
+    if (!process.env.GOOGLE_API_KEY) {
+      throw new Error('GOOGLE_API_KEY environment variable not set.');
+    }
+    this.ai = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+  }
 
   async saveMessage(userId: string, message: string, role: 'user' | 'assistant' | 'system', sessionId?: string, timestamp?: Date): Promise<ChatHistory> {
     const chatHistory = this.chatHistoryRepository.create({
@@ -79,5 +87,39 @@ export class ChatHistoryService {
 
   async deleteChatSession(userId: string, sessionId: string): Promise<void> {
     await this.chatHistoryRepository.delete({ userId, sessionId });
+  }
+
+  async summarizeSession(userId: string, sessionId: string): Promise<string> {
+    const messages = await this.getChatHistoryBySession(userId, sessionId);
+
+    if (messages.length === 0) {
+      return 'No messages found in this session.';
+    }
+
+    // Prepare the conversation text
+    const conversationText = messages
+      .sort((a, b) => new Date(a.timestamp || a.createdAt).getTime() - new Date(b.timestamp || b.createdAt).getTime())
+      .map(msg => `${msg.role === 'assistant' ? 'Assistant' : 'User'}: ${msg.message}`)
+      .join('\n');
+
+    try {
+      const model = this.ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+      const prompt = `Please provide a concise summary of this chat conversation between a user and an AI health assistant. Focus on the main topics discussed, key questions asked, and important information shared. Keep the summary to 2-3 sentences.
+
+Conversation:
+${conversationText}
+
+Summary:`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const summary = response.text().trim();
+
+      return summary || 'Unable to generate summary.';
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      return 'Error generating summary. Please try again later.';
+    }
   }
 }

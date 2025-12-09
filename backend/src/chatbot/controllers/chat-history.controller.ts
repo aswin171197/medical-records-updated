@@ -48,4 +48,11 @@ export class ChatHistoryController {
     await this.chatHistoryService.deleteChatSession(userId, sessionId);
     return { message: 'Chat session deleted successfully' };
   }
+
+  @Get('session/:sessionId/summary')
+  async getChatSessionSummary(@Param('sessionId') sessionId: string, @Request() req: any) {
+    const userId = req.user.id;
+    const summary = await this.chatHistoryService.summarizeSession(userId, sessionId);
+    return { summary };
+  }
 }

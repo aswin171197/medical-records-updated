@@ -9,6 +9,7 @@ import { ChatbotModule } from './chatbot/chatbot.module';
 import { databaseConfig } from './config/database.config';
 import { AppService } from './app.service';
 import { AppController } from './app.controller';
+import { RealtimeModule } from './realtime/realtime.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -21,7 +22,8 @@ import { AppController } from './app.controller';
     UsersModule,
     WhatsappModule,
     ChatbotModule,
-    
+    RealtimeModule,
+
   ],
   controllers:[
    AppController
