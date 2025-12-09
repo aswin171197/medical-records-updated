@@ -656,20 +656,8 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
     setIsTyping(true);
 
     if (connectionStatus === 'session-active') {
-      // Check if user is asking about lab values but no medical data is available
-      if (!medicalData || medicalData.trim().length === 0) {
-        const labKeywords = ['rbc', 'hemoglobin', 'glucose', 'cholesterol', 'creatinine', 'urea', 'bilirubin', 'alt', 'ast', 'ldl', 'hdl', 'triglycerides', 'hba1c', 'tsh', 'vitamin'];
-        const isLabQuery = labKeywords.some(keyword => userInput.toLowerCase().includes(keyword));
-        
-        if (isLabQuery) {
-          const contextMessage = `USER QUESTION: ${userInput}\n\nNOTE: The user is asking about lab values but no medical records are currently available in their profile. Please provide general information about the requested lab parameter (like RBC, hemoglobin, etc.), including normal ranges, what it measures, clinical significance, and suggest that they upload their medical records for personalized analysis of their specific results.`;
-          sendTextPart(contextMessage, '');
-        } else {
-          sendTextPart(userInput, medicalData);
-        }
-      } else {
-        sendTextPart(userInput, medicalData);
-      }
+      // Always send medical context with every message
+      sendTextPart(userInput, medicalData);
     } else {
       // Fallback response
       setTimeout(() => {
