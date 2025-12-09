@@ -1,6 +1,6 @@
 class HttpService {
   constructor() {
-    this.baseURL = process.env.REACT_APP_API_URL || 'https://medical-records-fullapp-3.onrender.com/';
+    this.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3000//';
     this.accessConfig = {
       'medical-record': {
         'extract-files': {
