@@ -180,7 +180,7 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
 
         if (approvedRecords.length > 0) {
           const buildContextString = (records, patient) => {
-            let context = "--- Approved Patient Medical Record Context ---\n\n";
+            let context = "--- COMPLETE PATIENT MEDICAL RECORD CONTEXT ---\n\n";
             
             // Add patient information
             if (patient && (patient.name || patient.email || patient.age || patient.gender)) {
@@ -197,46 +197,99 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
             if (!records || records.length === 0) return context + "No approved medical records found.";
 
             records.forEach((record, index) => {
-              context += `### FILE ${index + 1}: ${record.title || 'Untitled'} (Date: ${record.date || 'N/A'})\n`;
-              const extraction = record.extractedData?.[0]?.extraction;
+              context += `### MEDICAL RECORD ${index + 1}: ${record.title || 'Untitled'} (Date: ${record.date || 'N/A'})\n`;
+              const extraction = record.extractedData?.[0]?.extraction || record.extractedData?.[0];
+              
+              // Include raw text data if available
+              if (record.extractedData?.[0]?.text) {
+                context += "#### RAW DOCUMENT TEXT:\n";
+                const textData = record.extractedData[0].text;
+                if (typeof textData === 'object') {
+                  Object.entries(textData).forEach(([key, value]) => {
+                    if (value && typeof value === 'string' && value.trim()) {
+                      context += `${value}\n`;
+                    }
+                  });
+                } else if (typeof textData === 'string') {
+                  context += `${textData}\n`;
+                }
+                context += "\n";
+              }
+              
               if (!extraction) {
                 context += "No structured data extracted from this file.\n\n";
                 return;
               }
 
-              if (extraction.imaging_radiology_reports?.length) {
-                context += "#### 1. Imaging & Radiology Reports:\n";
-                extraction.imaging_radiology_reports.forEach(report => {
-                  context += `- Date: ${report.result_timestamp || 'N/A'}\n`;
-                  context += `  - Body Part: ${report.body_part || 'N/A'}\n`;
-                  context += `  - Scan Type: ${report.scan_type || 'N/A'}\n`;
-                  context += `  - Findings: ${report.findings || 'N/A'}\n`;
-                  context += `  - Impression: ${report.impression || report.report_text || 'No impression text'}\n`;
-                });
-                context += "\n";
-              }
-
+              // Laboratory Investigation Results - COMPLETE DATA
               if (extraction.investigations?.length) {
-                context += "#### 2. Laboratory Investigation Results:\n";
-                extraction.investigations.forEach(investigation => {
-                  const flag = investigation.flag === 'Normal' ? '' : ` (${investigation.flag})`;
-                  const date = investigation.result_timestamp ? ` on ${investigation.result_timestamp}` : '';
-                  context += `- ${investigation.investigation_name}${date}: ${investigation.result} ${investigation.unit}${flag} [Normal Range: ${investigation.reference_range}]\n`;
+                context += "#### LABORATORY INVESTIGATION RESULTS:\n";
+                extraction.investigations.forEach((investigation, idx) => {
+                  context += `${idx + 1}. TEST: ${investigation.investigation_name || 'Unknown Test'}\n`;
+                  context += `   - Date: ${investigation.result_timestamp || 'Not specified'}\n`;
+                  context += `   - Result: ${investigation.result || 'No result'} ${investigation.unit || ''}\n`;
+                  context += `   - Reference Range: ${investigation.reference_range || 'Not provided'}\n`;
+                  context += `   - Flag/Status: ${investigation.flag || 'Normal'}\n`;
+                  if (investigation.clinical_significance) {
+                    context += `   - Clinical Significance: ${investigation.clinical_significance}\n`;
+                  }
+                  if (investigation.interpretation) {
+                    context += `   - Interpretation: ${investigation.interpretation}\n`;
+                  }
+                  context += "\n";
                 });
-                context += "\n";
               }
 
-              if (extraction.other_clinical_data) {
-                context += "#### 3. Other Clinical Data:\n";
+              // Imaging & Radiology Reports - COMPLETE DATA
+              if (extraction.imaging_radiology_reports?.length) {
+                context += "#### IMAGING & RADIOLOGY REPORTS:\n";
+                extraction.imaging_radiology_reports.forEach((report, idx) => {
+                  context += `${idx + 1}. IMAGING STUDY:\n`;
+                  context += `   - Date: ${report.result_timestamp || 'Not specified'}\n`;
+                  context += `   - Body Part: ${report.body_part || 'Not specified'}\n`;
+                  context += `   - Scan Type: ${report.scan_type || 'Not specified'}\n`;
+                  context += `   - Findings: ${report.findings || 'No findings reported'}\n`;
+                  context += `   - Impression: ${report.impression || report.report_text || 'No impression'}\n`;
+                  if (report.recommendations) {
+                    context += `   - Recommendations: ${report.recommendations}\n`;
+                  }
+                  context += "\n";
+                });
+              }
+
+              // Other Clinical Data - COMPLETE DATA
+              if (extraction.other_clinical_data && extraction.other_clinical_data.trim()) {
+                context += "#### OTHER CLINICAL DATA & OBSERVATIONS:\n";
                 context += `${extraction.other_clinical_data}\n\n`;
               }
 
-              if (extraction.notes) {
-                context += "#### 4. Additional Notes:\n";
+              // Additional Notes
+              if (extraction.notes && extraction.notes.trim()) {
+                context += "#### ADDITIONAL CLINICAL NOTES:\n";
                 context += `${extraction.notes}\n\n`;
               }
+
+              // Include any other fields that might contain medical data
+              Object.keys(extraction).forEach(key => {
+                if (!['investigations', 'imaging_radiology_reports', 'other_clinical_data', 'notes'].includes(key)) {
+                  const value = extraction[key];
+                  if (value && (typeof value === 'string' || Array.isArray(value))) {
+                    context += `#### ${key.toUpperCase().replace(/_/g, ' ')}:\n`;
+                    if (Array.isArray(value)) {
+                      value.forEach((item, idx) => {
+                        context += `${idx + 1}. ${typeof item === 'object' ? JSON.stringify(item) : item}\n`;
+                      });
+                    } else {
+                      context += `${value}\n`;
+                    }
+                    context += "\n";
+                  }
+                }
+              });
             });
-            context += "--- END OF CONTEXT ---\n";
+            
+            context += "--- END OF COMPLETE MEDICAL CONTEXT ---\n";
+            context += "\nINSTRUCTIONS: Use ALL the above medical data to answer user questions about their health, lab results, imaging findings, and clinical observations.";
             return context;
           };
 
@@ -556,6 +609,7 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
 
     try {
       const safeMedicalData = sanitizeMedicalData(medicalData);
+      console.log('[AiChatV3] Starting session with medical data length:', safeMedicalData?.length || 0);
       const sessionData = safeMedicalData ? { medicalData: safeMedicalData } : {};
       await startSession(sessionData);
     } catch (error) {
