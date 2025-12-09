@@ -348,7 +348,7 @@ const Signup = ({ onSignup }) => {
   };
 
   const performPasswordSignup = async () => {
-    const response = await axios.post(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'http://localhost:3000/'}/auth/signup`, {
+    const response = await axios.post(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'http://localhost:3000//'}/auth/signup`, {
       name: formData.name,
       email: formData.email,
       password: formData.password,
@@ -363,7 +363,7 @@ const Signup = ({ onSignup }) => {
     setIsLoading(true);
     try {
       const mobile = countryCode + formData.mobile.replace(/\D/g, ''); // Combine country code with mobile
-      const response = await axios.post(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'http://localhost:3000/'}/auth/verify-otp-signup`, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL?.replace(/\/$/, '') || 'http://localhost:3000//'}/auth/verify-otp-signup`, {
         mobile: mobile,
         otp: otp
       });

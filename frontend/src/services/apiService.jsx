@@ -8,7 +8,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = process.env.REACT_APP_PDF_WORKER || '//
 /* -------------------------
    Small fetch-based HTTP helpers
    ------------------------- */
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000/';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000//';
 
 const buildHeaders = (extra = {}) => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -1094,7 +1094,7 @@ const uploadMedicalRecords = async (files, userInfo, body = {}) => {
       extractFormData.append('files', file);
     });
 
-    const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000/';
+    const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000//';
     console.log('=== API SERVICE BACKEND URL DEBUG ===');
     console.log('process.env.REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
     console.log('Final backendUrl:', backendUrl);
