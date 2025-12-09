@@ -325,7 +325,7 @@ const Login = ({ onLogin }) => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.emailOrMobile.trim()) {
-      newErrors.emailOrMobile = loginMethod === 'otp' ? 'Mobile number is required' : 'Email or mobile number is required';
+      newErrors.emailOrMobile = loginMethod === 'otp' ? 'Mobile number is required' : 'Email address is required';
     } else {
       if (loginMethod === 'otp') {
         // For OTP login, only validate as exactly 10 digits mobile
@@ -334,25 +334,9 @@ const Login = ({ onLogin }) => {
           newErrors.emailOrMobile = 'Please enter exactly 10 digits for mobile number';
         }
       } else {
-        // For password login, allow both email and mobile
-        const hasAt = formData.emailOrMobile.includes('@');
-        const cleaned = formData.emailOrMobile.replace(/[\s\-]/g, '');
-        const isDigits = /^\+?\d+$/.test(cleaned);
-
-        if (hasAt) {
-          // Validate as email
-          if (!/\S+@\S+\.\S+/.test(formData.emailOrMobile)) {
-            newErrors.emailOrMobile = 'Please enter a valid email address';
-          }
-        } else if (isDigits) {
-          // Validate as mobile
-          const cleanNumber = formData.emailOrMobile.replace(/\D/g, '');
-          if (cleanNumber.length < 10 || cleanNumber.length > 15) {
-            newErrors.emailOrMobile = 'Please enter a valid mobile number (10-15 digits)';
-          }
-        } else {
-          // Neither email nor mobile
-          newErrors.emailOrMobile = 'Please enter a valid email address or mobile number';
+        // For password login, only allow email
+        if (!/\S+@\S+\.\S+/.test(formData.emailOrMobile)) {
+          newErrors.emailOrMobile = 'Please enter a valid email address';
         }
       }
     }
@@ -413,25 +397,11 @@ const performPasswordLogin = async () => {
   setShowForgotPasswordDialog(false);
 
   try {
-    // Determine if input is email or mobile and send appropriate data
-    const hasAt = formData.emailOrMobile.includes('@');
-    const cleaned = formData.emailOrMobile.replace(/[\s\-]/g, '');
-    const isDigits = /^\+?\d+$/.test(cleaned);
-
-    let loginData;
-    if (hasAt) {
-      // Send as email
-      loginData = {
-        email: formData.emailOrMobile,
-        password: formData.password
-      };
-    } else if (isDigits) {
-      // Send as mobile (combine country code with cleaned number)
-      loginData = {
-        mobile: countryCode + formData.emailOrMobile.replace(/\D/g, ''),
-        password: formData.password
-      };
-    }
+    // For password login, always send as email
+    const loginData = {
+      email: formData.emailOrMobile,
+      password: formData.password
+    };
 
     const response = await axios.post('https://medical-records-fullapp-3.onrender.com/auth/login', loginData);
     console.log(response);
@@ -454,32 +424,11 @@ const performPasswordLogin = async () => {
       const message = error.response.data?.message || error.response.data?.error;
       
       if (status === 404 || (status === 401 && (message?.includes('not found') || message?.includes('does not exist')))) {
-        // Check if input is email or mobile to show specific error
-        const hasAt = formData.emailOrMobile.includes('@');
-        const cleaned = formData.emailOrMobile.replace(/[\s\-]/g, '');
-        const isDigits = /^\+?\d+$/.test(cleaned);
-        
-        if (hasAt) {
-          throw new Error('Email address not found. Please check your email or sign up for a new account.');
-        } else if (isDigits) {
-          throw new Error('Mobile number not found. Please check your mobile number or sign up for a new account.');
-        } else {
-          throw new Error('Account not found. Please check your credentials or sign up for a new account.');
-        }
+        throw new Error('Email address not found. Please check your email or sign up for a new account.');
       } else if (status === 401) {
         // Check if it's a user not found case based on message content
         if (message?.toLowerCase().includes('user') && (message?.toLowerCase().includes('not found') || message?.toLowerCase().includes('does not exist'))) {
-          const hasAt = formData.emailOrMobile.includes('@');
-          const cleaned = formData.emailOrMobile.replace(/[\s\-]/g, '');
-          const isDigits = /^\+?\d+$/.test(cleaned);
-          
-          if (hasAt) {
-            throw new Error('Email address not found. Please check your email or sign up for a new account.');
-          } else if (isDigits) {
-            throw new Error('Mobile number not found. Please check your mobile number or sign up for a new account.');
-          } else {
-            throw new Error('Account not found. Please check your credentials or sign up for a new account.');
-          }
+          throw new Error('Email address not found. Please check your email or sign up for a new account.');
         }
         throw new Error(message || 'Invalid email or password. Please try again.');
       } else if (status === 400) {
@@ -694,20 +643,21 @@ const handleOtpVerify = async (otp) => {
                     fontSize: '0.95rem'
                   }}
                 >
-                  {loginMethod === 'otp' ? 'Mobile Number' : 'Email or Mobile Number'}
+                  {loginMethod === 'otp' ? 'Mobile Number' : 'Email Address'}
                 </Typography>
                 <TextField
                   fullWidth
                   id="emailOrMobile"
                   name="emailOrMobile"
-                  type="text"
-                  autoComplete="username"
+                  type={loginMethod === 'otp' ? 'tel' : 'email'}
+                  autoComplete={loginMethod === 'otp' ? 'tel' : 'email'}
                   autoFocus={loginMethod !== 'otp'}
                   value={formData.emailOrMobile}
                   onChange={handleChange}
                   error={!!errors.emailOrMobile}
                   helperText={errors.emailOrMobile}
                   disabled={isLoading}
+                  placeholder={loginMethod === 'otp' ? 'Enter your mobile number' : 'Enter your email address'}
                   inputProps={{
                     maxLength: loginMethod === 'otp' ? 10 : undefined,
                     pattern: loginMethod === 'otp' ? '[0-9]*' : undefined,
@@ -715,54 +665,47 @@ const handleOtpVerify = async (otp) => {
                   InputProps={{
                     startAdornment: (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
-                        {(() => {
-                           const currentValue = formData.emailOrMobile;
-                           const cleaned = currentValue.replace(/[\s\-]/g, '');
-                           const shouldShowMobile = loginMethod === 'otp' ||
-                             (cleaned.length > 0 && /^\+?\d+$/.test(cleaned));
-
-                           return shouldShowMobile ? (
-                             <>
-                               <PhoneIcon sx={{ color: '#2563eb', fontSize: 20 }} />
-                               <Select
-                                 value={countryCode}
-                                 onChange={(e) => setCountryCode(e.target.value)}
-                                 disabled={isLoading}
-                                 variant="standard"
-                                 disableUnderline
-                                 sx={{
-                                   width: 65,
-                                   '& .MuiSelect-select': {
-                                     padding: '2px 4px',
-                                     fontSize: '0.8rem',
-                                     display: 'flex',
-                                     alignItems: 'center',
-                                     justifyContent: 'center',
-                                     backgroundColor: 'transparent',
-                                     color: '#2563eb',
-                                     fontWeight: 600,
-                                   },
-                                   '& .MuiSelect-icon': {
-                                     color: '#2563eb',
-                                     right: 0,
-                                     fontSize: '1rem',
-                                   },
-                                 }}
-                               >
-                                {countryCodes.map((country) => (
-                                  <MenuItem key={country.code} value={country.code}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                      <span>{country.flag}</span>
-                                      <span style={{ fontSize: '0.8rem' }}>{country.code}</span>
-                                    </Box>
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </>
-                          ) : (
-                            <EmailIcon sx={{ color: '#2563eb', fontSize: 20 }} />
-                          );
-                        })()}
+                        {loginMethod === 'otp' ? (
+                          <>
+                            <PhoneIcon sx={{ color: '#2563eb', fontSize: 20 }} />
+                            <Select
+                              value={countryCode}
+                              onChange={(e) => setCountryCode(e.target.value)}
+                              disabled={isLoading}
+                              variant="standard"
+                              disableUnderline
+                              sx={{
+                                width: 65,
+                                '& .MuiSelect-select': {
+                                  padding: '2px 4px',
+                                  fontSize: '0.8rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: 'transparent',
+                                  color: '#2563eb',
+                                  fontWeight: 600,
+                                },
+                                '& .MuiSelect-icon': {
+                                  color: '#2563eb',
+                                  right: 0,
+                                  fontSize: '1rem',
+                                },
+                              }}
+                            >
+                              {countryCodes.map((country) => (
+                                <MenuItem key={country.code} value={country.code}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <span>{country.flag}</span>
+                                    <span style={{ fontSize: '0.8rem' }}>{country.code}</span>
+                                  </Box>
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </>
+                        ) : (
+                          <EmailIcon sx={{ color: '#2563eb', fontSize: 20 }} />
+                        )}
                       </Box>
                     ),
                   }}
