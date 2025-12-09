@@ -613,7 +613,17 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
     try {
       const safeMedicalData = sanitizeMedicalData(medicalData);
       console.log('[AiChatV3] Starting session with medical data length:', safeMedicalData?.length || 0);
-      const sessionData = safeMedicalData ? { medicalData: safeMedicalData } : {};
+      console.log('[AiChatV3] Full medical data being sent:', safeMedicalData);
+      const sessionData = { 
+        medicalData: safeMedicalData || '',
+        patientInfo: {
+          name: JSON.parse(localStorage.getItem('user') || '{}').name || '',
+          email: JSON.parse(localStorage.getItem('user') || '{}').email || '',
+          age: JSON.parse(localStorage.getItem('user') || '{}').age || '',
+          dateOfBirth: JSON.parse(localStorage.getItem('user') || '{}').dateOfBirth || ''
+        },
+        allMedicalRecords: JSON.parse(localStorage.getItem('medicalRecords') || '[]')
+      };
       await startSession(sessionData);
     } catch (error) {
       setAudioError('Failed to start session: ' + (error?.message || String(error)));
