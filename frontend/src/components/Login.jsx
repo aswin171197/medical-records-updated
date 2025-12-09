@@ -22,7 +22,9 @@ import {
   Login as LoginIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
-  Lock as LockIcon
+  Lock as LockIcon,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import { Select, MenuItem } from '@mui/material';
 import OtpVerification from './OtpVerification';
@@ -50,6 +52,7 @@ const Login = ({ onLogin }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [backendStatus, setBackendStatus] = useState('checking'); // 'checking', 'online', 'offline'
   const [countryCode, setCountryCode] = useState('+91');
+  const [showPassword, setShowPassword] = useState(false);
 
   const countryCodes = [
     { code: '+1', flag: '🇺🇸', name: 'United States' },
@@ -774,7 +777,7 @@ const handleOtpVerify = async (otp) => {
                   required
                   fullWidth
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   id="password"
                   autoComplete="current-password"
                   value={formData.password}
@@ -785,6 +788,15 @@ const handleOtpVerify = async (otp) => {
                   InputProps={{
                     startAdornment: (
                       <LockIcon sx={{ color: '#2563eb', mr: 1 }} />
+                    ),
+                    endAdornment: (
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        sx={{ color: '#2563eb' }}
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
                     ),
                   }}
                   sx={{
