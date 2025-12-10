@@ -297,10 +297,15 @@ export default function useGeminiRealtime() {
 
     console.log('[useGeminiRealtime] sendTextPart called with:');
     console.log('- Text:', text);
-    console.log('- Medical context available:', !!medicalContext);
+    console.log('- Medical context length:', medicalContext?.length || 0);
 
-    // Send just the user text - medical context is already in system prompt
-    socketRef.current.emit('send-text', text);
+    // Include full medical context with every message since systemInstruction doesn't work in Live API
+    let messageToSend = text;
+    if (medicalContext && medicalContext.trim()) {
+      messageToSend = `${medicalContext}\n\nUSER QUESTION: ${text}\n\nYou are a medical AI assistant. Answer the user's question using ONLY the medical data provided above. Provide exact lab values, dates, reference ranges, and clinical details from the records.`;
+    }
+
+    socketRef.current.emit('send-text', messageToSend);
   }, []);
 
   const sendAudioChunk = useCallback((audioPayload) => {
