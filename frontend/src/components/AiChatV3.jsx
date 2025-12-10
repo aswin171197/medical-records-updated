@@ -666,8 +666,8 @@ const Aiv3chat = ({ open, onClose, medicalData: propMedicalData }) => {
     setIsTyping(true);
 
     if (connectionStatus === 'session-active') {
-      // Always send medical context with every message
-      sendTextPart(userInput, medicalData);
+      // Send user input - medical context is in system prompt
+      sendTextPart(userInput);
     } else {
       // Fallback response
       setTimeout(() => {

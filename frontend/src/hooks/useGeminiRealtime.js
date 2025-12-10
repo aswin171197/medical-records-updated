@@ -294,22 +294,13 @@ export default function useGeminiRealtime() {
       console.warn('[useGeminiRealtime] cannot send text: socket not connected');
       return;
     }
-    
+
     console.log('[useGeminiRealtime] sendTextPart called with:');
     console.log('- Text:', text);
-    console.log('- Medical context length:', medicalContext?.length || 0);
-    console.log('- Medical context preview:', medicalContext?.substring(0, 200) + '...');
-    
-    // Include medical context directly in the message if available
-    let enhancedText = text;
-    if (medicalContext && medicalContext.trim()) {
-      enhancedText = `${medicalContext}\n\nUSER QUESTION: ${text}\n\nYou are a medical AI assistant. Answer the user's question using ONLY the medical data provided above. If they ask about RBC, hemoglobin, or any lab values, provide the exact results, dates, and reference ranges from their medical records. Be specific and detailed.`;
-      console.log('[useGeminiRealtime] Enhanced text length:', enhancedText.length);
-    } else {
-      console.log('[useGeminiRealtime] No medical context available, sending text as-is');
-    }
-    
-    socketRef.current.emit('send-text', enhancedText);
+    console.log('- Medical context available:', !!medicalContext);
+
+    // Send just the user text - medical context is already in system prompt
+    socketRef.current.emit('send-text', text);
   }, []);
 
   const sendAudioChunk = useCallback((audioPayload) => {
